@@ -1,0 +1,53 @@
+/node_modules
+/public/build
+/public/hot
+/public/storage
+/storage/*.key
+/storage/framework/cache/data/*
+/storage/framework/sessions/*
+/storage/framework/views/*.php
+/storage/logs/*.log
+/vendor
+.env
+.env.backup
+.env.production
+.phpunit.result.cache
+Homestead.json
+Homestead.yaml
+auth.json
+npm-debug.log
+yarn-error.log
+/.fleet
+/.idea
+/.vscode
+
+# Archivos de documentación y análisis
+ANALISIS_*.md
+ANALISIS_*.txt
+CORRECCIONES_*.md
+CORRECCION_*.md
+DOCUMENTACION_*.md
+ESTADO_*.md
+FLUJO_*.md
+LIMPIEZA_*.txt
+MIGRACION_*.md
+PANEL_*.md
+README_DOCUMENTACION.md
+CLAUDE.md
+
+# Carpetas duplicadas del proyecto
+Cobro_Transporte/
+Interflow/
+Interflow-Final/
+Interflow_final/
+
+# Archivos varios innecesarios
+Dockerfile.txt
+*.docx
+*.jpg
+*.PNG
+nul
+modelo_ejemplo.jpg
+modificar.jpg
+funciondevoluciones.PNG
+"Proyecto de grado.docx"

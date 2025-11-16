@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(php artisan:*)",
+      "Bash(cat:*)",
+      "Bash(NUL)",
+      "Bash(dir:*)",
+      "Bash(php test_api.php:*)",
+      "Bash(npm run build:*)",
+      "Bash(findstr:*)",
+      "Bash(powershell -Command \"$input | Select-Object -Last 30\")",
+      "Bash(powershell -Command \"Get-Content storage\\logs\\laravel.log -Tail 100 | Select-String -Pattern ''ERROR|Exception|reversed'' -Context 2,2\")",
+      "Bash(powershell:*)",
+      "Bash(php -r:*)",
+      "Bash(nul)",
+      "Bash(git add:*)",
+      "Bash(git reset:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

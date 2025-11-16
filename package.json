@@ -1,0 +1,42 @@
+{
+    "private": true,
+    "scripts": {
+        "dev": "vite",
+        "build": "vite build",
+        "test": "vitest run --pool=threads",
+        "test:watch": "vitest --pool=threads",
+        "test:ui": "vitest --ui --pool=threads",
+        "test:coverage": "vitest run --coverage --pool=threads"
+    },
+    "devDependencies": {
+        "@tailwindcss/forms": "^0.5.2",
+        "@testing-library/dom": "^10.4.1",
+        "@testing-library/jest-dom": "^6.9.1",
+        "@testing-library/react": "^16.3.0",
+        "@testing-library/user-event": "^14.6.1",
+        "@vitejs/plugin-react": "^5.1.0",
+        "alpinejs": "^3.4.2",
+        "autoprefixer": "^10.4.21",
+        "axios": "^1.12.2",
+        "happy-dom": "^20.0.8",
+        "jsdom": "^27.0.1",
+        "laravel-vite-plugin": "^2.0.1",
+        "lodash": "^4.17.19",
+        "postcss": "^8.5.6",
+        "tailwindcss": "^3.4.18",
+        "vite": "^7.1.5",
+        "vitest": "^4.0.4"
+    },
+    "dependencies": {
+        "@ionic/react": "^8.7.6",
+        "@ionic/react-router": "^8.7.6",
+        "ionicons": "^8.0.13",
+        "jotai": "^2.15.0",
+        "jquery": "^3.7.1",
+        "qrcode.react": "^4.2.0",
+        "react": "^19.2.0",
+        "react-dom": "^19.2.0",
+        "react-router-dom": "^6.30.1",
+        "select2": "^4.1.0-rc.0"
+    }
+}
