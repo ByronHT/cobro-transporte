@@ -13,6 +13,14 @@ RUN apt-get update && apt-get install -y \
     libzip-dev \
     && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip
 
+# En el Dockerfile, después de copiar los archivos (COPY . /var/www/html):
+
+# 1. Establecer el propietario de las carpetas al usuario de Apache (www-data)
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+
+# 2. Dar permisos de escritura (recursivos)
+RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+
 # Instalar Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
