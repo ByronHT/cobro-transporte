@@ -109,3 +109,19 @@ Route::get('/generate-key', function () {
         'artisan' => trim(shell_exec('php artisan key:generate --show')),
     ];
 });
+use Illuminate\Support\Facades\Artisan;
+
+Route::get('/cache-config', function () {
+    Artisan::call('config:cache');
+    return "✔ Config cache generado correctamente.";
+});
+
+Route::get('/cache-routes', function () {
+    Artisan::call('route:cache');
+    return "✔ Route cache generado correctamente.";
+});
+
+Route::get('/run-migrations', function () {
+    Artisan::call('migrate --force');
+    return "✔ Migraciones ejecutadas.";
+});
