@@ -34,7 +34,7 @@ COPY . /var/www/html
 RUN composer install --no-dev --optimize-autoloader --no-interaction
 
 # Instalar dependencias de Node y compilar assets
-RUN npm install && npm run build
+RUN npm install --legacy-peer-deps && npm run build
 
 # Permisos correctos
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
