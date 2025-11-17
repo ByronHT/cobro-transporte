@@ -102,3 +102,10 @@ Route::middleware('auth')->get('/usuario', function () {
 Route::fallback(function () {
     return view('welcome');
 });
+Route::get('/generate-key', function () {
+    return [
+        'key' => \Illuminate\Support\Str::random(32),
+        'base64' => base64_encode(random_bytes(32)),
+        'artisan' => trim(shell_exec('php artisan key:generate --show')),
+    ];
+});
