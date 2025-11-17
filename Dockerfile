@@ -16,8 +16,8 @@ RUN apt-get update && apt-get install -y \
 # Instalar Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Instalar Node.js 18
-RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+# Instalar Node.js 20 (REQUERIDO para vite@7 y laravel-vite-plugin)
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs
 
 # Configurar Apache
@@ -34,7 +34,8 @@ COPY . /var/www/html
 RUN composer install --no-dev --optimize-autoloader --no-interaction
 
 # Instalar dependencias de Node y compilar assets
-RUN npm install --legacy-peer-deps && npm run build
+RUN npm install --legacy-peer-deps
+RUN npm run build
 
 # Permisos correctos
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
