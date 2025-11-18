@@ -40,6 +40,16 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
+  // Ignorar URLs que no sean HTTP/HTTPS (extensiones de Chrome, etc.)
+  if (!url.protocol.startsWith('http')) {
+    return;
+  }
+
+  // Ignorar peticiones a dominios externos
+  if (url.origin !== location.origin) {
+    return;
+  }
+
   // Network First para APIs
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(
