@@ -1,0 +1,28 @@
+{
+  "name": "Interflow - Sistema de Transporte",
+  "short_name": "Interflow",
+  "description": "Sistema de cobro de transporte público con RFID",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0891b2",
+  "theme_color": "#0891b2",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/img/logo_fondotrasnparente.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/img/logo_fondotrasnparente.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["transportation", "finance", "productivity"],
+  "screenshots": [],
+  "scope": "/",
+  "prefer_related_applications": false
+}
