@@ -21,7 +21,14 @@ yarn-error.log
 /.idea
 /.vscode
 
-# Archivos de documentación y análisis
+# Archivos temporales y de sistema
+nul
+*.tmp
+*.bak
+*.swp
+*~
+
+# Archivos de documentación innecesarios para producción
 ANALISIS_*.md
 ANALISIS_*.txt
 CORRECCIONES_*.md
@@ -30,24 +37,19 @@ DOCUMENTACION_*.md
 ESTADO_*.md
 FLUJO_*.md
 LIMPIEZA_*.txt
-MIGRACION_*.md
 PANEL_*.md
 README_DOCUMENTACION.md
-CLAUDE.md
+dockerfile.txt
+Dockerfile.txt
+
+# Imágenes y documentos de desarrollo
+*.docx
+modelo_ejemplo.jpg
+modificar.jpg
+funciondevoluciones.PNG
 
 # Carpetas duplicadas del proyecto
 Cobro_Transporte/
 Interflow/
 Interflow-Final/
 Interflow_final/
-
-# Archivos varios innecesarios
-Dockerfile.txt
-*.docx
-*.jpg
-*.PNG
-nul
-modelo_ejemplo.jpg
-modificar.jpg
-funciondevoluciones.PNG
-"Proyecto de grado.docx"
