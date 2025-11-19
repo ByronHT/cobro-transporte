@@ -14,11 +14,10 @@ export default defineConfig({
         }),
     ],
     server: {
-        host: '192.168.1.2',
+        host: '0.0.0.0',
         hmr: {
-            host: '192.168.1.2:8000',
+            host: 'localhost',
         },
-        origin: 'http://192.168.1.2:5173',
         cors: true
     },
     test: {

@@ -184,9 +184,13 @@ vendor/bin/phpunit --coverage-html coverage
 
 ## 📄 Documentación Adicional
 
-- [CLAUDE.md](CLAUDE.md) - Guía del proyecto para AI
-- [RAILWAY_DEPLOY.md](RAILWAY_DEPLOY.md) - Guía de despliegue en Railway
-- [MIGRACION_A_PRODUCCION.md](MIGRACION_A_PRODUCCION.md) - Guía completa de migración
+- [CLAUDE.md](CLAUDE.md) - Guia del proyecto para AI
+- [DEPLOYMENT_COMPLETO_RAILWAY.md](DEPLOYMENT_COMPLETO_RAILWAY.md) - Guia completa de despliegue
+- [ARDUINO_PRODUCCION.md](ARDUINO_PRODUCCION.md) - Codigo Arduino para produccion
+- [FLUJOS_PRINCIPALES.md](FLUJOS_PRINCIPALES.md) - Flujos del sistema para presentacion
+- [GUIA_DEFENSA_FINAL.md](GUIA_DEFENSA_FINAL.md) - Guia preparatoria para defensa
+- [MIGRACION_APP_MOVIL.md](MIGRACION_APP_MOVIL.md) - Opciones de app movil
+- [PWA_MOBILE_APP.md](PWA_MOBILE_APP.md) - Implementacion PWA
 
 ## 🤝 Contribuciones
 

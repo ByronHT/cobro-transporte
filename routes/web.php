@@ -103,22 +103,3 @@ Route::middleware('auth')->get('/usuario', function () {
 Route::fallback(function () {
     return view('welcome');
 });
-Route::get('/generate-key', function () {
-    \Artisan::call('key:generate');
-    return 'APP_KEY generada exitosamente: ' . config('app.key');
-});
-
-Route::get('/cache-config', function () {
-    Artisan::call('config:cache');
-    return "✔ Config cache generado correctamente.";
-});
-
-Route::get('/cache-routes', function () {
-    Artisan::call('route:cache');
-    return "✔ Route cache generado correctamente.";
-});
-
-Route::get('/run-migrations', function () {
-    Artisan::call('migrate --force');
-    return "✔ Migraciones ejecutadas.";
-});
