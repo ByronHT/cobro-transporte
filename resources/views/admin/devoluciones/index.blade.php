@@ -3,14 +3,14 @@
         {{-- Encabezado --}}
         <div class="mb-6 flex justify-between items-center">
             <div>
-                <h1 class="text-3xl font-bold text-gray-900">💰 Devoluciones Aprobadas</h1>
-                <p class="text-gray-600 mt-1">Gestión de devoluciones realizadas por choferes</p>
+                <h1 class="text-2xl font-bold text-gray-900">Devoluciones Aprobadas</h1>
+                <p class="text-gray-600 text-sm">Gestion de devoluciones realizadas por choferes</p>
             </div>
-            <a href="{{ route('admin.dashboard') }}" class="inline-flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors duration-150">
+            <a href="{{ route('admin.dashboard') }}" class="inline-flex items-center gap-2 px-6 py-3 bg-gray-600 text-white rounded-xl shadow-lg hover:bg-gray-700 transition-all duration-200 font-semibold">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
                 </svg>
-                Volver al Dashboard
+                Volver al Panel
             </a>
         </div>
 
@@ -93,7 +93,7 @@
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     @if($devolucion->is_reversed)
                                         <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-amber-100 text-amber-800">
-                                            ⚠️ REVERTIDA
+                                            REVERTIDA
                                         </span>
                                         <p class="text-xs text-gray-500 mt-1">{{ optional($devolucion->reversed_at)->format('d/m/Y H:i') }}</p>
                                         <p class="text-xs text-gray-600 mt-1 max-w-xs truncate" title="{{ $devolucion->reversal_reason }}">
@@ -101,7 +101,7 @@
                                         </p>
                                     @else
                                         <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                            ✓ Activa
+                                            Activa
                                         </span>
                                     @endif
                                 </td>

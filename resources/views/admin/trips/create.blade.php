@@ -1,16 +1,4 @@
 <x-app-layout>
-    <x-slot name="header">
-        <div class="flex items-center gap-3">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" />
-            </svg>
-            <div>
-                <h2 class="font-bold text-2xl">Registrar Viaje</h2>
-                <p class="text-blue-100 text-sm">Crear un nuevo viaje</p>
-            </div>
-        </div>
-    </x-slot>
-
     <div class="py-6 max-w-4xl mx-auto sm:px-6 lg:px-8">
         <div class="bg-white rounded-xl shadow-lg p-6">
             {{-- Errores de validación --}}

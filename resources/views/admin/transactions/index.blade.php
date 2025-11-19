@@ -1,8 +1,11 @@
 <x-app-layout>
     <div class="py-6 max-w-7xl mx-auto sm:px-6 lg:px-8">
-        {{-- Botón de volver --}}
+        {{-- Encabezado --}}
         <div class="mb-6 flex justify-between items-center">
-            <div></div>
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Registro de Transacciones</h1>
+                <p class="text-gray-600 text-sm">Historial de pagos, recargas y devoluciones</p>
+            </div>
             <a href="{{ route('admin.dashboard') }}"
                class="inline-flex items-center gap-2 px-6 py-3 bg-gray-600 text-white rounded-xl shadow-lg hover:bg-gray-700 transition-all duration-200 font-semibold">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -131,15 +134,15 @@
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     @if($transaction->type === 'fare')
                                         <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-orange-100 text-orange-800">
-                                            💳 Pago
+                                            Pago
                                         </span>
                                     @elseif($transaction->type === 'refund')
                                         <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800">
-                                            🔄 Devolución
+                                            Devolucion
                                         </span>
                                     @else
                                         <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                                            💰 Recarga
+                                            Recarga
                                         </span>
                                     @endif
                                 </td>

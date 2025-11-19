@@ -1,16 +1,4 @@
 <x-app-layout>
-    <x-slot name="header">
-        <div class="flex items-center gap-3">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
-            </svg>
-            <div>
-                <h2 class="font-bold text-2xl">Registrar Ruta</h2>
-                <p class="text-blue-100 text-sm">Crear una nueva ruta de transporte</p>
-            </div>
-        </div>
-    </x-slot>
-
     <div class="py-6 max-w-4xl mx-auto sm:px-6 lg:px-8">
         <div class="bg-white rounded-xl shadow-lg p-6">
             {{-- Errores de validación --}}
