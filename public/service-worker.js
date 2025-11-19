@@ -50,6 +50,17 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // IMPORTANTE: No interceptar peticiones POST (formularios, login, etc.)
+  if (request.method !== 'GET') {
+    return;
+  }
+
+  // No cachear rutas de admin/login
+  if (url.pathname.startsWith('/login') || url.pathname.startsWith('/admin')) {
+    event.respondWith(fetch(request));
+    return;
+  }
+
   // Network First para APIs
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(
@@ -64,7 +75,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cache First para assets estáticos
+  // Cache First para assets estáticos (solo GET)
   event.respondWith(
     caches.match(request)
       .then((response) => {
