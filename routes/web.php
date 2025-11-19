@@ -16,10 +16,15 @@ use Illuminate\Support\Facades\Artisan;
 
 
 
-// Ruta de inicio - Redirige a login para drivers/passengers (React)
+// Ruta de inicio - Redirige al login de administradores
 Route::get('/', function () {
-    return view('welcome');
+    return redirect()->route('login');
 });
+
+// Login de usuarios (React app) - para verificar cuentas de chofer/pasajero
+Route::get('/login', function () {
+    return view('welcome');
+})->name('login.user');
 
 Route::get('/test-select2', function () {
     return view('test');
