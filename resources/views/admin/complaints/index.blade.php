@@ -1,6 +1,21 @@
 <x-app-layout>
     <div class="py-6 max-w-7xl mx-auto sm:px-6 lg:px-8">
-        {{-- Botones de acción --}}
+        {{-- Encabezado --}}
+        <div class="mb-6 flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Quejas de Pasajeros</h1>
+                <p class="text-gray-600 text-sm">Gestion y seguimiento de quejas reportadas</p>
+            </div>
+            <a href="{{ route('admin.dashboard') }}"
+               class="inline-flex items-center gap-2 px-6 py-3 bg-gray-600 text-white rounded-xl shadow-lg hover:bg-gray-700 transition-all duration-200 font-semibold">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+                </svg>
+                Volver al Panel
+            </a>
+        </div>
+
+        {{-- Filtros de estado --}}
         <div class="mb-6 flex justify-between items-center">
             <div class="flex gap-2">
                 <a href="{{ route('admin.complaints.index', ['status' => 'all']) }}"
@@ -16,13 +31,6 @@
                     Atendidas ({{ App\Models\Complaint::where('status', 'reviewed')->count() }})
                 </a>
             </div>
-            <a href="{{ route('admin.dashboard') }}"
-               class="inline-flex items-center gap-2 px-6 py-3 bg-gray-600 text-white rounded-xl shadow-lg hover:bg-gray-700 transition-all duration-200 font-semibold">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
-                </svg>
-                Volver al Panel
-            </a>
         </div>
 
         {{-- Mensaje de éxito --}}

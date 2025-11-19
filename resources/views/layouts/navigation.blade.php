@@ -78,7 +78,19 @@
                         Tarjetas
                     </a>
 
-                    {{-- 4. Buses --}}
+                    {{-- 4. Líneas --}}
+                    <a href="{{ route('admin.rutas.index') }}"
+                       class="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200
+                       {{ request()->routeIs('admin.rutas.*')
+                           ? 'bg-blue-700 text-white shadow-lg'
+                           : 'text-blue-100 hover:bg-blue-700/50 hover:text-white' }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
+                        </svg>
+                        Lineas
+                    </a>
+
+                    {{-- 5. Buses --}}
                     <a href="{{ route('admin.buses.index') }}"
                        class="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200
                        {{ request()->routeIs('admin.buses.*')
@@ -89,18 +101,6 @@
                             <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1v-5a1 1 0 00-.293-.707l-2-2A1 1 0 0015 7h-1z" />
                         </svg>
                         Buses
-                    </a>
-
-                    {{-- 5. Líneas --}}
-                    <a href="{{ route('admin.rutas.index') }}"
-                       class="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200
-                       {{ request()->routeIs('admin.rutas.*')
-                           ? 'bg-blue-700 text-white shadow-lg'
-                           : 'text-blue-100 hover:bg-blue-700/50 hover:text-white' }}">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
-                        </svg>
-                        Líneas
                     </a>
 
                     {{-- 6. Viajes --}}
@@ -195,13 +195,13 @@
             <x-responsive-nav-link :href="route('admin.cards.index')" :active="request()->routeIs('admin.cards.*')" class="text-blue-100">
                 Tarjetas
             </x-responsive-nav-link>
-            {{-- 4. Buses --}}
+            {{-- 4. Líneas --}}
+            <x-responsive-nav-link :href="route('admin.rutas.index')" :active="request()->routeIs('admin.rutas.*')" class="text-blue-100">
+                Lineas
+            </x-responsive-nav-link>
+            {{-- 5. Buses --}}
             <x-responsive-nav-link :href="route('admin.buses.index')" :active="request()->routeIs('admin.buses.*')" class="text-blue-100">
                 Buses
-            </x-responsive-nav-link>
-            {{-- 5. Líneas --}}
-            <x-responsive-nav-link :href="route('admin.rutas.index')" :active="request()->routeIs('admin.rutas.*')" class="text-blue-100">
-                Líneas
             </x-responsive-nav-link>
             {{-- 6. Viajes --}}
             <x-responsive-nav-link :href="route('admin.trips.index')" :active="request()->routeIs('admin.trips.*')" class="text-blue-100">
