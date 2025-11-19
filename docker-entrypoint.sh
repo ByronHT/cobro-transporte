@@ -20,9 +20,13 @@ php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 
-# Ejecutar migraciones (solo si es necesario)
-echo "🔄 Verificando migraciones..."
+# Ejecutar migraciones
+echo "🔄 Ejecutando migraciones..."
 php artisan migrate --force --no-interaction || echo "⚠️ Error en migraciones, continuando..."
+
+# Ejecutar seeders (crear usuario admin)
+echo "🌱 Ejecutando seeders..."
+php artisan db:seed --force --no-interaction || echo "⚠️ Seeders ya ejecutados o error"
 
 # Crear enlace simbólico para storage
 echo "🔗 Creando enlace simbólico para storage..."

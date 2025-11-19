@@ -14,7 +14,8 @@ return new class extends Migration
     public function up()
     {
         Schema::table('trips', function (Blueprint $table) {
-            $table->text('reporte')->default('Viaje concluido sin novedades')->after('fin');
+            // MySQL no permite default en TEXT, usar nullable en su lugar
+            $table->text('reporte')->nullable()->after('fin');
         });
     }
 
