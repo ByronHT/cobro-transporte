@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\Artisan;
 
 // Ruta de inicio - Redirige al login de administradores
 Route::get('/', function () {
-    return redirect()->route('login');
+    return redirect('/login-admin');
 });
 
 // Login de usuarios (React app) - para verificar cuentas de chofer/pasajero
