@@ -79,18 +79,18 @@
                                     <div class="text-xs text-gray-500">{{ $bus->model ?? '-' }}</div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    @if($bus->activeTrip && $bus->activeTrip->driver)
+                                    @if($bus->driver)
                                         <div class="flex items-center gap-2">
                                             <div class="p-2 bg-green-100 rounded-lg">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-green-600" viewBox="0 0 20 20" fill="currentColor">
                                                     <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
                                                 </svg>
                                             </div>
-                                            <span class="text-sm font-medium text-gray-900">{{ $bus->activeTrip->driver->name }}</span>
+                                            <span class="text-sm font-medium text-gray-900">{{ $bus->driver->name }}</span>
                                         </div>
                                     @else
                                         <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-600">
-                                            Sin viaje activo
+                                            Sin chofer asignado
                                         </span>
                                     @endif
                                 </td>

@@ -11,14 +11,15 @@ class BusController extends Controller
 {
     public function index()
     {
-        $buses = Bus::with('ruta', 'activeTrip.driver')->paginate(20);
+        $buses = Bus::with('ruta', 'driver')->paginate(20);
         return view('admin.bus.index', compact('buses'));
     }
 
     public function create()
     {
         $rutas = Ruta::all();
-        return view('admin.bus.create', compact('rutas'));
+        $drivers = User::where('role', 'driver')->where('active', 1)->get();
+        return view('admin.bus.create', compact('rutas', 'drivers'));
     }
 
     public function store(Request $request)
@@ -26,10 +27,11 @@ class BusController extends Controller
         $request->validate([
             'plate' => 'required|unique:buses,plate',
             'code' => 'required|unique:buses,code',
-            'ruta_id' => 'required|exists:rutas,id'
+            'ruta_id' => 'required|exists:rutas,id',
+            'driver_id' => 'nullable|exists:users,id'
         ]);
 
-        Bus::create($request->only(['plate','code','brand','model','ruta_id']));
+        Bus::create($request->only(['plate','code','brand','model','ruta_id','driver_id']));
 
         return redirect()->route('admin.buses.index')->with('success','Bus creado correctamente.');
     }
@@ -38,7 +40,7 @@ class BusController extends Controller
     {
         $rutas = Ruta::all();
         $drivers = User::where('role', 'driver')->where('active', 1)->get();
-        $bus->load('activeTrip.driver');
+        $bus->load('driver');
         return view('admin.bus.edit', compact('bus', 'rutas', 'drivers'));
     }
 
@@ -49,10 +51,11 @@ class BusController extends Controller
             'code' => "required|unique:buses,code,{$bus->id}",
             'brand' => 'nullable|string',
             'model' => 'nullable|string',
-            'ruta_id' => 'required|exists:rutas,id'
+            'ruta_id' => 'required|exists:rutas,id',
+            'driver_id' => 'nullable|exists:users,id'
         ]);
 
-        $bus->update($request->only(['plate','code','brand','model','ruta_id']));
+        $bus->update($request->only(['plate','code','brand','model','ruta_id','driver_id']));
 
         return redirect()->route('admin.buses.index')->with('success','Bus actualizado correctamente.');
     }

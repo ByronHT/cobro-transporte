@@ -71,6 +71,25 @@
                            class="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 </div>
 
+                <div class="mb-6 p-4 bg-blue-50 border-l-4 border-blue-500 rounded-lg">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+                        </svg>
+                        Asignar Chofer
+                    </label>
+                    <select name="driver_id"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">Sin asignar</option>
+                        @foreach($drivers as $driver)
+                            <option value="{{ $driver->id }}" {{ old('driver_id') == $driver->id ? 'selected' : '' }}>
+                                {{ $driver->name }} ({{ $driver->email }})
+                            </option>
+                        @endforeach
+                    </select>
+                    <p class="text-xs text-gray-600 mt-2">Selecciona un chofer para asignarlo a este bus</p>
+                </div>
+
                 <div class="flex justify-between items-center mt-8">
                     <a href="{{ route('admin.buses.index') }}"
                        class="inline-flex items-center gap-2 px-6 py-3 bg-gray-600 text-white rounded-xl shadow-lg hover:bg-gray-700 transition-all duration-200 font-semibold">

@@ -71,7 +71,7 @@
                         <option value="">Sin asignar</option>
                         @foreach($drivers as $driver)
                             <option value="{{ $driver->id }}"
-                                {{ ($bus->activeAssignment && $bus->activeAssignment->driver_id == $driver->id) ? 'selected' : '' }}>
+                                {{ old('driver_id', $bus->driver_id) == $driver->id ? 'selected' : '' }}>
                                 {{ $driver->name }} ({{ $driver->email }})
                             </option>
                         @endforeach

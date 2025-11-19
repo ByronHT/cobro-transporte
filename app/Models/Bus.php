@@ -7,11 +7,16 @@ class Bus extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['plate','code','brand','model','ruta_id'];
+    protected $fillable = ['plate','code','brand','model','ruta_id','driver_id'];
 
     public function ruta()
     {
         return $this->belongsTo(Ruta::class, 'ruta_id');
+    }
+
+    public function driver()
+    {
+        return $this->belongsTo(User::class, 'driver_id');
     }
 
     public function trips()
