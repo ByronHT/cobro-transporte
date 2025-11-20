@@ -2,7 +2,8 @@
     "private": true,
     "scripts": {
         "dev": "vite",
-        "build": "vite build",
+        "build": "vite build && node postbuild.js",
+        "build:mobile": "npm run build && npx cap sync android",
         "test": "vitest run --pool=threads",
         "test:watch": "vitest --pool=threads",
         "test:ui": "vitest --ui --pool=threads",
