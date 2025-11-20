@@ -95,6 +95,7 @@ function PassengerDashboard() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [showQr, setShowQr] = useState(false);
+    const [showBalance, setShowBalance] = useState(true); // Estado para mostrar/ocultar saldo
     const [transactions, setTransactions] = useState([]);
     const [notification, setNotification] = useState(null);
     const [previousBalance, setPreviousBalance] = useState(null);
@@ -132,7 +133,7 @@ function PassengerDashboard() {
     // Estado para navegación inferior (Bottom Nav) - controla qué pantalla mostrar
     const [activeTab, setActiveTab] = useState('inicio'); // inicio, movimientos, devoluciones, quejas, mas
 
-    // Estados para "Encontrar Línea"
+    // Estados para "Buscar Línea"
     const [showFindLineView, setShowFindLineView] = useState(false);
     const [availableRoutes, setAvailableRoutes] = useState([]);
     const [selectedRouteId, setSelectedRouteId] = useState('');
@@ -355,7 +356,7 @@ function PassengerDashboard() {
         }
     };
 
-    // Funciones para "Encontrar Línea"
+    // Funciones para "Buscar Línea"
     const loadAvailableRoutes = async () => {
         try {
             const response = await apiClient.get('/api/passenger/available-routes');
@@ -1225,9 +1226,10 @@ function PassengerDashboard() {
                             fontWeight: '700',
                             margin: '0'
                         }}>
-                            Bs. {user?.balance || '0.00'}
+                            {showBalance ? `Bs. ${user?.balance || '0.00'}` : 'Bs. ••••'}
                         </h1>
                         <button
+                            onClick={() => setShowBalance(!showBalance)}
                             style={{
                                 background: 'transparent',
                                 border: 'none',
@@ -1238,7 +1240,7 @@ function PassengerDashboard() {
                                 textDecoration: 'underline'
                             }}
                         >
-                            Ocultar saldo
+                            {showBalance ? 'Ocultar saldo' : 'Mostrar saldo'}
                         </button>
                     </div>
 
@@ -1358,7 +1360,7 @@ function PassengerDashboard() {
                                 <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
                             </svg>
                         </div>
-                        <span style={{ fontSize: '12px', color: '#1e293b', fontWeight: '600', textAlign: 'center' }}>Encontrar Línea</span>
+                        <span style={{ fontSize: '12px', color: '#1e293b', fontWeight: '600', textAlign: 'center' }}>Buscar Línea</span>
                     </button>
 
                     <button
@@ -1942,7 +1944,7 @@ function PassengerDashboard() {
                 </div>
             )}
 
-            {/* Vista Fullscreen: Encontrar Línea */}
+            {/* Vista Fullscreen: Buscar Línea */}
             {showFindLineView && (
                 <div style={{
                     position: 'fixed',
@@ -1970,7 +1972,7 @@ function PassengerDashboard() {
                             color: 'white',
                             margin: 0
                         }}>
-                            🚍 Encontrar Línea
+                            🚍 Buscar Línea
                         </h2>
                         <button
                             onClick={() => {
@@ -2214,27 +2216,6 @@ function PassengerDashboard() {
                 zIndex: 1000
             }}>
                 <button
-                    onClick={() => setActiveTab('inicio')}
-                    style={{
-                        background: 'transparent',
-                        border: 'none',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: '4px',
-                        padding: '8px 16px',
-                        transition: 'all 0.3s',
-                        color: activeTab === 'inicio' ? '#0891b2' : '#64748b'
-                    }}
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" style={{ width: '24px', height: '24px' }} viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
-                    </svg>
-                    <span style={{ fontSize: '11px', fontWeight: activeTab === 'inicio' ? '700' : '500' }}>Inicio</span>
-                </button>
-
-                <button
                     onClick={() => {
                         setActiveTab('movimientos');
                         loadTransactions();
@@ -2260,7 +2241,7 @@ function PassengerDashboard() {
                 </button>
 
                 <button
-                    onClick={() => setShowQr(true)}
+                    onClick={() => setActiveTab('inicio')}
                     style={{
                         background: 'linear-gradient(135deg, #0891b2, #06b6d4)',
                         border: 'none',
@@ -2279,8 +2260,7 @@ function PassengerDashboard() {
                     onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" style={{ width: '28px', height: '28px' }} viewBox="0 0 20 20" fill="white">
-                        <path fillRule="evenodd" d="M3 4a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm2 2V5h1v1H5zM3 13a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-3zm2 2v-1h1v1H5zM13 3a1 1 0 00-1 1v3a1 1 0 001 1h3a1 1 0 001-1V4a1 1 0 00-1-1h-3zm1 2v1h1V5h-1z" clipRule="evenodd" />
-                        <path d="M11 4a1 1 0 10-2 0v1a1 1 0 002 0V4zM10 7a1 1 0 011 1v1h1a1 1 0 110 2h-1v1a1 1 0 11-2 0v-1H8a1 1 0 110-2h1V8a1 1 0 011-1zM16 9a1 1 0 100 2 1 1 0 000-2zM9 13a1 1 0 011-1h1a1 1 0 110 2v2a1 1 0 11-2 0v-3zM7 11a1 1 0 100-2H4a1 1 0 100 2h3zM17 13a1 1 0 01-1 1h-2a1 1 0 110-2h2a1 1 0 011 1zM16 17a1 1 0 100-2h-3a1 1 0 100 2h3z" />
+                        <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
                     </svg>
                 </button>
 
