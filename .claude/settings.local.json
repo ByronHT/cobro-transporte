@@ -26,7 +26,8 @@
       "Bash(railway ssh:*)",
       "Bash(if not exist \"C:\\Users\\brand\\OneDrive\\Escritorio\\cobro-transporte\\cobro-transporte\\resources\" mkdir \"C:\\Users\\brand\\OneDrive\\Escritorio\\cobro-transporte\\cobro-transporte\\resources\")",
       "Bash(copy:*)",
-      "Bash(del /Q \"DEPLOYMENT_CHECKLIST.md\" \"MIGRACION_A_PRODUCCION.md\" \"RAILWAY_DEPLOY.md\" \"PWA_MOBILE_APP.md\" \"RAILWAY_FIX_419.md\" \"CONFIGURAR_RAILWAY_AHORA.md\" \"DEPLOYMENT_COMPLETO_RAILWAY.md\" \"RAILWAY_VARIABLES.md\" 2)"
+      "Bash(del /Q \"DEPLOYMENT_CHECKLIST.md\" \"MIGRACION_A_PRODUCCION.md\" \"RAILWAY_DEPLOY.md\" \"PWA_MOBILE_APP.md\" \"RAILWAY_FIX_419.md\" \"CONFIGURAR_RAILWAY_AHORA.md\" \"DEPLOYMENT_COMPLETO_RAILWAY.md\" \"RAILWAY_VARIABLES.md\" 2)",
+      "Bash(railway logs:*)"
     ],
     "deny": [],
     "ask": []
