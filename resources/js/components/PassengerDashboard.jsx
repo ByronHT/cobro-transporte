@@ -1951,9 +1951,9 @@ function PassengerDashboard() {
                     top: 0,
                     left: 0,
                     right: 0,
-                    bottom: 0,
+                    bottom: '80px',
                     background: '#f8fafc',
-                    zIndex: 9999,
+                    zIndex: 999,
                     display: 'flex',
                     flexDirection: 'column'
                 }}>
@@ -2200,7 +2200,7 @@ function PassengerDashboard() {
                 </div>
             )}
 
-            {/* Bottom Navigation Bar tipo Yape */}
+            {/* Bottom Navigation Bar tipo Yape - SIEMPRE VISIBLE */}
             <div style={{
                 position: 'fixed',
                 bottom: 0,
@@ -2215,8 +2215,36 @@ function PassengerDashboard() {
                 boxShadow: '0 -2px 10px rgba(0,0,0,0.1)',
                 zIndex: 1000
             }}>
+                {/* 1. Buscar Línea */}
                 <button
                     onClick={() => {
+                        setShowFindLineView(true);
+                        loadAvailableRoutes();
+                        getUserLocation();
+                    }}
+                    style={{
+                        background: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '8px 12px',
+                        transition: 'all 0.3s',
+                        color: showFindLineView ? '#0891b2' : '#64748b'
+                    }}
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" style={{ width: '24px', height: '24px' }} viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                    </svg>
+                    <span style={{ fontSize: '10px', fontWeight: showFindLineView ? '700' : '500' }}>Buscar</span>
+                </button>
+
+                {/* 2. Movimientos */}
+                <button
+                    onClick={() => {
+                        setShowFindLineView(false);
                         setActiveTab('movimientos');
                         loadTransactions();
                     }}
@@ -2228,20 +2256,24 @@ function PassengerDashboard() {
                         flexDirection: 'column',
                         alignItems: 'center',
                         gap: '4px',
-                        padding: '8px 16px',
+                        padding: '8px 12px',
                         transition: 'all 0.3s',
-                        color: activeTab === 'movimientos' ? '#0891b2' : '#64748b'
+                        color: activeTab === 'movimientos' && !showFindLineView ? '#0891b2' : '#64748b'
                     }}
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" style={{ width: '24px', height: '24px' }} viewBox="0 0 20 20" fill="currentColor">
                         <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
                         <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" />
                     </svg>
-                    <span style={{ fontSize: '11px', fontWeight: activeTab === 'movimientos' ? '700' : '500' }}>Movimientos</span>
+                    <span style={{ fontSize: '10px', fontWeight: activeTab === 'movimientos' && !showFindLineView ? '700' : '500' }}>Movimientos</span>
                 </button>
 
+                {/* 3. Inicio (centro) */}
                 <button
-                    onClick={() => setActiveTab('inicio')}
+                    onClick={() => {
+                        setShowFindLineView(false);
+                        setActiveTab('inicio');
+                    }}
                     style={{
                         background: 'linear-gradient(135deg, #0891b2, #06b6d4)',
                         border: 'none',
@@ -2264,8 +2296,12 @@ function PassengerDashboard() {
                     </svg>
                 </button>
 
+                {/* 4. Devoluciones */}
                 <button
-                    onClick={() => setActiveTab('devoluciones')}
+                    onClick={() => {
+                        setShowFindLineView(false);
+                        setActiveTab('devoluciones');
+                    }}
                     style={{
                         background: 'transparent',
                         border: 'none',
@@ -2274,9 +2310,9 @@ function PassengerDashboard() {
                         flexDirection: 'column',
                         alignItems: 'center',
                         gap: '4px',
-                        padding: '8px 16px',
+                        padding: '8px 12px',
                         transition: 'all 0.3s',
-                        color: activeTab === 'devoluciones' ? '#0891b2' : '#64748b',
+                        color: activeTab === 'devoluciones' && !showFindLineView ? '#0891b2' : '#64748b',
                         position: 'relative'
                     }}
                 >
@@ -2284,7 +2320,7 @@ function PassengerDashboard() {
                         <span style={{
                             position: 'absolute',
                             top: '4px',
-                            right: '12px',
+                            right: '8px',
                             background: '#ef4444',
                             color: 'white',
                             fontSize: '10px',
@@ -2301,11 +2337,15 @@ function PassengerDashboard() {
                         <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z" />
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clipRule="evenodd" />
                     </svg>
-                    <span style={{ fontSize: '11px', fontWeight: activeTab === 'devoluciones' ? '700' : '500' }}>Devoluciones</span>
+                    <span style={{ fontSize: '10px', fontWeight: activeTab === 'devoluciones' && !showFindLineView ? '700' : '500' }}>Devoluciones</span>
                 </button>
 
+                {/* 5. Quejas */}
                 <button
-                    onClick={() => setActiveTab('quejas')}
+                    onClick={() => {
+                        setShowFindLineView(false);
+                        setActiveTab('quejas');
+                    }}
                     style={{
                         background: 'transparent',
                         border: 'none',
@@ -2314,15 +2354,15 @@ function PassengerDashboard() {
                         flexDirection: 'column',
                         alignItems: 'center',
                         gap: '4px',
-                        padding: '8px 16px',
+                        padding: '8px 12px',
                         transition: 'all 0.3s',
-                        color: activeTab === 'quejas' ? '#0891b2' : '#64748b'
+                        color: activeTab === 'quejas' && !showFindLineView ? '#0891b2' : '#64748b'
                     }}
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" style={{ width: '24px', height: '24px' }} viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                     </svg>
-                    <span style={{ fontSize: '11px', fontWeight: activeTab === 'quejas' ? '700' : '500' }}>Quejas</span>
+                    <span style={{ fontSize: '10px', fontWeight: activeTab === 'quejas' && !showFindLineView ? '700' : '500' }}>Quejas</span>
                 </button>
             </div>
         </div>
