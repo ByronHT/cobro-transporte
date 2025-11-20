@@ -2,8 +2,11 @@ import React, { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import ComplaintsSection from './ComplaintsSection';
+import { API_BASE_URL, POLLING_INTERVAL } from '../config';
 
-const apiClient = axios.create();
+const apiClient = axios.create({
+    baseURL: API_BASE_URL
+});
 
 apiClient.interceptors.request.use(config => {
     const token = localStorage.getItem('passenger_token');
@@ -95,12 +98,22 @@ function PassengerDashboard() {
     const [transactions, setTransactions] = useState([]);
     const [notification, setNotification] = useState(null);
     const [previousBalance, setPreviousBalance] = useState(null);
+    // Generar sessionId único para esta sesión (evita notificaciones duplicadas al recargar)
+    const sessionIdRef = useRef((() => {
+        const existing = sessionStorage.getItem('passenger_session_id');
+        if (existing) return existing;
+        const newId = Date.now() + '_' + Math.random().toString(36);
+        sessionStorage.setItem('passenger_session_id', newId);
+        return newId;
+    })());
+
     const [lastEventId, setLastEventId] = useState(() => {
-        // Cargar el último ID de evento desde localStorage al iniciar
-        const saved = localStorage.getItem('passenger_last_event_id');
+        // Cargar el último ID de evento desde sessionStorage (no localStorage)
+        const saved = sessionStorage.getItem(`passenger_last_event_${sessionIdRef.current}`);
         return saved ? parseInt(saved) : 0;
     });
-    // Usar useRef en lugar de useState para isInitialLoad para que se actualice inmediatamente
+
+    // isInitialLoad ahora solo es true la primera vez en esta sesión
     const isInitialLoadRef = useRef(true);
     const qrCodeRef = useRef(null);
 
@@ -264,10 +277,10 @@ function PassengerDashboard() {
                         });
                     }
 
-                    // Actualizar el último ID procesado y guardarlo en localStorage
+                    // Actualizar el último ID procesado y guardarlo en sessionStorage (para esta sesión)
                     const maxId = Math.max(...newEvents.map(e => e.id));
                     setLastEventId(maxId);
-                    localStorage.setItem('passenger_last_event_id', maxId.toString());
+                    sessionStorage.setItem(`passenger_last_event_${sessionIdRef.current}`, maxId.toString());
                 }
 
             } catch (err) {
@@ -287,8 +300,8 @@ function PassengerDashboard() {
                         localStorage.removeItem('passenger_token');
                         localStorage.removeItem('passenger_role');
                         localStorage.removeItem('passenger_name');
-                        localStorage.removeItem('passenger_last_event_id');
-                        navigate('/login-passenger');
+                        sessionStorage.clear();
+                        navigate('/login');
                     } else {
                         // Error temporal → solo logear, no cerrar sesión
                         console.warn('Error 401 temporal. Reintentando en siguiente ciclo...');
@@ -302,7 +315,7 @@ function PassengerDashboard() {
         };
 
         fetchData(); // Primera carga
-        intervalId = setInterval(fetchData, 10000); // Actualizar cada 10 segundos (optimizado)
+        intervalId = setInterval(fetchData, POLLING_INTERVAL); // Actualizar cada 60 segundos
 
         return () => {
             isMounted = false;
@@ -314,8 +327,8 @@ function PassengerDashboard() {
         localStorage.removeItem('passenger_token');
         localStorage.removeItem('passenger_role');
         localStorage.removeItem('passenger_name');
-        localStorage.removeItem('passenger_last_event_id'); // Limpiar eventos al cerrar sesión
-        navigate('/login-passenger');
+        sessionStorage.clear(); // Limpiar toda la sesión
+        navigate('/login');
     };
 
     const loadTransactions = async () => {
@@ -545,7 +558,8 @@ function PassengerDashboard() {
         img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
     };
 
-    if (loading) {
+    // Solo mostrar pantalla de carga en la primera vez (cuando no hay usuario)
+    if (loading && !user) {
         return (
             <div style={{
                 minHeight: '100vh',

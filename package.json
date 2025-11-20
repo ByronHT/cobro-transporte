@@ -9,6 +9,8 @@
         "test:coverage": "vitest run --coverage --pool=threads"
     },
     "devDependencies": {
+        "@capacitor/assets": "^3.0.5",
+        "@capacitor/cli": "^7.4.4",
         "@tailwindcss/forms": "^0.5.2",
         "@testing-library/dom": "^10.4.1",
         "@testing-library/jest-dom": "^6.9.1",
@@ -28,8 +30,10 @@
         "vitest": "^4.0.4"
     },
     "dependencies": {
+        "@capacitor/android": "^7.4.4",
+        "@capacitor/camera": "^7.0.2",
+        "@capacitor/core": "^7.4.4",
         "@ionic/react": "^8.7.6",
-        "@ionic/react-router": "^8.7.6",
         "ionicons": "^8.0.13",
         "jotai": "^2.15.0",
         "jquery": "^3.7.1",

@@ -1,8 +1,12 @@
 import React, { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import CameraButton from './CameraButton';
+import { API_BASE_URL, POLLING_INTERVAL } from '../config';
 
-const apiClient = axios.create();
+const apiClient = axios.create({
+    baseURL: API_BASE_URL
+});
 
 apiClient.interceptors.request.use(config => {
     const token = localStorage.getItem('driver_token');
@@ -27,12 +31,22 @@ function DriverDashboard() {
     const [isActionLoading, setIsActionLoading] = useState(false);
     const [notification, setNotification] = useState(null);
     const [lastTransactionCount, setLastTransactionCount] = useState(0);
+    // Generar sessionId único para esta sesión (evita notificaciones duplicadas al recargar)
+    const sessionIdRef = useRef((() => {
+        const existing = sessionStorage.getItem('driver_session_id');
+        if (existing) return existing;
+        const newId = Date.now() + '_' + Math.random().toString(36);
+        sessionStorage.setItem('driver_session_id', newId);
+        return newId;
+    })());
+
     const [lastEventId, setLastEventId] = useState(() => {
-        // Cargar el último ID de evento desde localStorage al iniciar
-        const saved = localStorage.getItem('driver_last_event_id');
+        // Cargar el último ID de evento desde sessionStorage (no localStorage)
+        const saved = sessionStorage.getItem(`driver_last_event_${sessionIdRef.current}`);
         return saved ? parseInt(saved) : 0;
     });
-    // Usar useRef en lugar de useState para isInitialLoad para que se actualice inmediatamente
+
+    // isInitialLoad ahora solo es true la primera vez en esta sesión
     const isInitialLoadRef = useRef(true);
 
     // Estados para sistema de reportes
@@ -77,7 +91,7 @@ function DriverDashboard() {
         };
 
         safeFetch(); // Primera carga
-        intervalId = setInterval(safeFetch, 15000); // Optimizado a 15 segundos para reducir carga del servidor
+        intervalId = setInterval(safeFetch, POLLING_INTERVAL); // 60 segundos para reducir recargas
 
         return () => {
             isMounted = false;
@@ -199,10 +213,10 @@ function DriverDashboard() {
                     });
                 }
 
-                // Actualizar el último ID procesado y guardarlo en localStorage
+                // Actualizar el último ID procesado y guardarlo en sessionStorage (para esta sesión)
                 const maxId = Math.max(...newEvents.map(e => e.id));
                 setLastEventId(maxId);
-                localStorage.setItem('driver_last_event_id', maxId.toString());
+                sessionStorage.setItem(`driver_last_event_${sessionIdRef.current}`, maxId.toString());
             }
         } catch (err) {
             if (err.response && err.response.status === 404 && err.response.data.message === 'No hay viaje activo.') {
@@ -237,8 +251,8 @@ function DriverDashboard() {
                     localStorage.removeItem('driver_token');
                     localStorage.removeItem('driver_role');
                     localStorage.removeItem('driver_name');
-                    localStorage.removeItem('driver_last_event_id');
-                    navigate('/login-driver');
+                    sessionStorage.clear();
+                    navigate('/login');
                 } else {
                     // Error temporal → solo logear, no cerrar sesión
                     console.warn('Error 401 temporal. Reintentando en siguiente ciclo...');
@@ -596,8 +610,8 @@ function DriverDashboard() {
         localStorage.removeItem('driver_token');
         localStorage.removeItem('driver_role');
         localStorage.removeItem('driver_name');
-        localStorage.removeItem('driver_last_event_id'); // Limpiar eventos al cerrar sesión
-        navigate('/login-driver');
+        sessionStorage.clear(); // Limpiar toda la sesión
+        navigate('/login');
     };
 
     const showNotification = (notif) => {
@@ -609,7 +623,8 @@ function DriverDashboard() {
         }, 5000);
     };
 
-    if (loading && !driverData && !isTripActive) {
+    // Solo mostrar pantalla de carga en la primera vez (cuando no hay datos)
+    if (loading && !driverData && !isTripActive && !driverId) {
         return (
             <div style={{
                 minHeight: '100vh',
@@ -1546,30 +1561,11 @@ function DriverDashboard() {
                             }}>
                                 Foto del Incidente (Opcional)
                             </label>
-                            <input
-                                type="file"
-                                accept="image/*"
-                                onChange={(e) => setTripReportPhoto(e.target.files[0])}
-                                style={{
-                                    width: '100%',
-                                    padding: '12px',
-                                    border: '2px solid #e2e8f0',
-                                    borderRadius: '10px',
-                                    fontSize: '14px',
-                                    boxSizing: 'border-box',
-                                    cursor: 'pointer'
-                                }}
+                            <CameraButton
+                                onPhotoTaken={setTripReportPhoto}
+                                label="Tomar Foto del Incidente"
+                                disabled={false}
                             />
-                            {tripReportPhoto && (
-                                <p style={{
-                                    margin: '8px 0 0 0',
-                                    color: '#10b981',
-                                    fontSize: '12px',
-                                    fontWeight: '600'
-                                }}>
-                                    ✓ Archivo seleccionado: {tripReportPhoto.name}
-                                </p>
-                            )}
                         </div>
 
                         <div style={{ display: 'flex', gap: '12px' }}>

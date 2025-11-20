@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import CameraButton from './CameraButton';
+import FullscreenView from './FullscreenView';
 
 const ComplaintsSection = ({ apiClient }) => {
     const [complaints, setComplaints] = useState([]);
@@ -251,67 +253,14 @@ const ComplaintsSection = ({ apiClient }) => {
                 </div>
             )}
 
-            {/* Modal Nueva Queja */}
+            {/* Modal Nueva Queja - Fullscreen */}
             {showNewComplaintModal && (
-                <div style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    background: 'rgba(0,0,0,0.7)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    zIndex: 1000,
-                    padding: '20px',
-                    backdropFilter: 'blur(4px)'
-                }}>
-                    <div style={{
-                        background: 'white',
-                        padding: '30px',
-                        borderRadius: '20px',
-                        maxWidth: '600px',
-                        width: '100%',
-                        maxHeight: '90vh',
-                        overflowY: 'auto',
-                        boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
-                    }}>
-                        <div style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            marginBottom: '24px'
-                        }}>
-                            <h3 style={{
-                                color: '#1e293b',
-                                fontSize: '24px',
-                                fontWeight: '700',
-                                margin: 0
-                            }}>
-                                Nueva Queja
-                            </h3>
-                            <button
-                                onClick={resetForm}
-                                style={{
-                                    background: '#f1f5f9',
-                                    border: 'none',
-                                    borderRadius: '8px',
-                                    width: '36px',
-                                    height: '36px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    cursor: 'pointer',
-                                    color: '#64748b'
-                                }}
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" style={{ width: '20px', height: '20px' }} viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                                </svg>
-                            </button>
-                        </div>
-
+                <FullscreenView
+                    title="Nueva Queja"
+                    onClose={resetForm}
+                    headerColor="linear-gradient(135deg, #ef4444, #dc2626)"
+                >
+                    <div style={{ padding: '20px' }}>
                         <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '24px' }}>
                             Selecciona la línea donde tuviste el problema y luego el chofer correspondiente.
                         </p>
@@ -441,26 +390,11 @@ const ComplaintsSection = ({ apiClient }) => {
                             }}>
                                 Foto (opcional)
                             </label>
-                            <input
-                                type="file"
-                                accept="image/*"
-                                onChange={(e) => setComplaintPhoto(e.target.files[0])}
+                            <CameraButton
+                                onPhotoTaken={setComplaintPhoto}
+                                label="Tomar Foto de la Queja"
                                 disabled={!selectedDriver}
-                                style={{
-                                    width: '100%',
-                                    padding: '12px',
-                                    border: '2px solid #e2e8f0',
-                                    borderRadius: '10px',
-                                    fontSize: '14px',
-                                    boxSizing: 'border-box',
-                                    cursor: !selectedDriver ? 'not-allowed' : 'pointer'
-                                }}
                             />
-                            {complaintPhoto && (
-                                <p style={{ margin: '8px 0 0 0', color: '#10b981', fontSize: '12px', fontWeight: '600' }}>
-                                    ✓ Archivo seleccionado: {complaintPhoto.name}
-                                </p>
-                            )}
                         </div>
 
                         {/* Botones */}
@@ -503,7 +437,7 @@ const ComplaintsSection = ({ apiClient }) => {
                             </button>
                         </div>
                     </div>
-                </div>
+                </FullscreenView>
             )}
         </div>
     );
