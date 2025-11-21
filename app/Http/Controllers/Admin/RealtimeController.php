@@ -80,6 +80,9 @@ class RealtimeController extends Controller
                 'trip_start_formatted' => $trip && $trip->inicio ? \Carbon\Carbon::parse($trip->inicio)->format('H:i') : null,
                 'trip_end' => $trip ? $trip->fin : null,
                 'trip_end_formatted' => $trip && $trip->fin ? \Carbon\Carbon::parse($trip->fin)->format('H:i') : 'En curso',
+                'trip_status' => $trip && !$trip->fin ? 'activo' : 'finalizado',
+                'trip_report' => $trip ? $trip->reporte : null,
+                'has_report' => $trip && !empty($trip->reporte) ? true : false,
                 'last_update' => $location->recorded_at->diffForHumans(),
                 'last_update_timestamp' => $location->recorded_at->toIso8601String(),
                 'is_active' => $location->is_active

@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import CameraButton from './CameraButton';
 import { API_BASE_URL, POLLING_INTERVAL } from '../config';
+import { useGPSTracking } from '../hooks/useGPSTracking';
 
 const apiClient = axios.create({
     baseURL: API_BASE_URL
@@ -79,6 +80,14 @@ function DriverDashboard() {
     const [loadingRefunds, setLoadingRefunds] = useState(false);
     const [reversalReason, setReversalReason] = useState('');
     const [selectedRefundForReversal, setSelectedRefundForReversal] = useState(null);
+
+    // 📍 Hook de tracking GPS optimizado
+    const gpsTracking = useGPSTracking({
+        busId: busId,
+        isTripActive: isTripActive,
+        token: localStorage.getItem('driver_token'),
+        apiBaseUrl: API_BASE_URL
+    });
 
     useEffect(() => {
         let intervalId;
@@ -933,6 +942,42 @@ function DriverDashboard() {
                                     </p>
                                 </div>
                             </div>
+
+                            {/* Badge de estado GPS */}
+                            {gpsTracking.isTracking && (
+                                <div style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    padding: '6px 10px',
+                                    background: gpsTracking.error ? '#fef2f2' : '#ecfdf5',
+                                    borderRadius: '6px',
+                                    marginBottom: '12px',
+                                    border: `1px solid ${gpsTracking.error ? '#fecaca' : '#a7f3d0'}`
+                                }}>
+                                    <div style={{
+                                        width: '6px',
+                                        height: '6px',
+                                        background: gpsTracking.error ? '#ef4444' : '#10b981',
+                                        borderRadius: '50%',
+                                        animation: gpsTracking.error ? 'none' : 'pulse 2s infinite'
+                                    }}></div>
+                                    <span style={{
+                                        fontSize: '11px',
+                                        color: gpsTracking.error ? '#991b1b' : '#065f46',
+                                        fontWeight: '500'
+                                    }}>
+                                        {gpsTracking.error ? (
+                                            `Error GPS: ${gpsTracking.error}`
+                                        ) : (
+                                            <>
+                                                GPS Activo • {gpsTracking.locationCount} ubicaciones enviadas
+                                                {gpsTracking.lastLocation && ` • ${gpsTracking.isMoving ? '🚶 En movimiento' : '⏸️ Estacionado'}`}
+                                            </>
+                                        )}
+                                    </span>
+                                </div>
+                            )}
 
                             {/* Info en grid compacto */}
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>

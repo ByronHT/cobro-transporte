@@ -51,85 +51,37 @@
         </div>
     </div>
 
+    {{-- Leaflet CSS --}}
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
     @push('scripts')
+    {{-- Leaflet JS --}}
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
     <script>
         let map;
         let markers = {};
         let selectedBus = null;
-        let hasGoogleMaps = false;
 
-        // Verificar si Google Maps está disponible
-        function checkGoogleMaps() {
-            return typeof google !== 'undefined' && typeof google.maps !== 'undefined';
-        }
+        // Centro de Santa Cruz, Bolivia (ajusta según tu ciudad)
+        const defaultCenter = [-17.7833, -63.1821];
 
-        // Inicializar mapa (requiere Google Maps API Key)
+        // Inicializar mapa con Leaflet + OpenStreetMap
         function initMap() {
-            hasGoogleMaps = checkGoogleMaps();
+            // Crear mapa
+            map = L.map('map').setView(defaultCenter, 13);
 
-            if (!hasGoogleMaps) {
-                console.warn('Google Maps API no disponible. Mostrando mensaje al usuario.');
-                showNoMapMessage();
-                // Aún así, cargar buses para mostrar en el sidebar
-                loadActiveBuses();
-                setInterval(loadActiveBuses, 10000);
-                return;
-            }
-
-            // Centro de Santa Cruz, Bolivia (ajusta según tu ciudad)
-            const center = { lat: -17.7833, lng: -63.1821 };
-
-            map = new google.maps.Map(document.getElementById('map'), {
-                zoom: 13,
-                center: center,
-                mapTypeControl: true,
-                streetViewControl: true,
-                fullscreenControl: true,
-                styles: []
-            });
+            // Agregar capa de OpenStreetMap
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                maxZoom: 19
+            }).addTo(map);
 
             // Cargar buses activos
             loadActiveBuses();
 
             // Auto-refresh cada 10 segundos
             setInterval(loadActiveBuses, 10000);
-        }
-
-        // Mostrar mensaje cuando no hay API Key
-        function showNoMapMessage() {
-            document.getElementById('map').innerHTML = `
-                <div class="flex items-center justify-center h-full bg-gradient-to-br from-blue-50 to-blue-100">
-                    <div class="text-center p-8 bg-white rounded-xl shadow-lg max-w-md">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-20 w-20 text-yellow-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                        </svg>
-                        <h3 class="text-xl font-bold text-gray-800 mb-2">Google Maps API Key Requerida</h3>
-                        <p class="text-gray-600 mb-4">Para visualizar el mapa en tiempo real, necesitas configurar una API Key de Google Maps.</p>
-                        <div class="bg-blue-50 border-l-4 border-blue-500 p-4 text-left text-sm mb-4">
-                            <p class="font-semibold text-blue-800 mb-2">📋 Pasos para configurar:</p>
-                            <ol class="list-decimal list-inside text-blue-700 space-y-2">
-                                <li>Ir a <a href="https://console.cloud.google.com" target="_blank" class="underline hover:text-blue-900">Google Cloud Console</a></li>
-                                <li>Crear proyecto y habilitar "Maps JavaScript API"</li>
-                                <li>Crear API Key con restricciones de dominio</li>
-                                <li>Agregar la API Key al archivo <code class="bg-blue-100 px-1 rounded">.env</code>:</li>
-                            </ol>
-                        </div>
-                        <div class="bg-gray-800 text-green-400 p-3 rounded-lg text-sm font-mono mb-4">
-                            <div class="text-gray-400"># Agregar al final del archivo .env</div>
-                            <div>GOOGLE_MAPS_API_KEY=tu_api_key_aqui</div>
-                        </div>
-                        <div class="flex items-start gap-2 bg-yellow-50 border border-yellow-200 rounded p-3 text-xs">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-yellow-600 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
-                            </svg>
-                            <div class="text-yellow-800">
-                                <strong>Cuota gratuita:</strong> Google Maps ofrece $200 USD/mes gratis (~28,000 cargas de mapa)
-                            </div>
-                        </div>
-                        <p class="text-xs text-gray-500 mt-4 text-center">💡 Mientras tanto, puedes ver la información de los buses en el panel lateral →</p>
-                    </div>
-                </div>
-            `;
         }
 
         // Cargar buses activos desde el backend
@@ -141,11 +93,7 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        if (hasGoogleMaps) {
-                            updateBusMarkers(data.buses);
-                        } else {
-                            showBusesList(data.buses);
-                        }
+                        updateBusMarkers(data.buses);
                         document.getElementById('busCount').textContent = data.count;
 
                         // Si no hay buses, mostrar mensaje
@@ -160,29 +108,147 @@
                 });
         }
 
-        // Mostrar lista de buses cuando no hay mapa
-        function showBusesList(buses) {
-            if (buses.length === 0) return;
+        // Icono personalizado para buses
+        const busIcon = L.icon({
+            iconUrl: 'data:image/svg+xml;base64,' + btoa(`
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#3b82f6" width="32" height="32">
+                    <path d="M12 2C7 2 3 6 3 11c0 5.25 9 13 9 13s9-7.75 9-13c0-5-4-9-9-9zm0 12.5c-1.93 0-3.5-1.57-3.5-3.5S10.07 7.5 12 7.5s3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/>
+                </svg>
+            `),
+            iconSize: [32, 32],
+            iconAnchor: [16, 32],
+            popupAnchor: [0, -32]
+        });
+
+        const busIconSelected = L.icon({
+            iconUrl: 'data:image/svg+xml;base64,' + btoa(`
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ef4444" width="40" height="40">
+                    <path d="M12 2C7 2 3 6 3 11c0 5.25 9 13 9 13s9-7.75 9-13c0-5-4-9-9-9zm0 12.5c-1.93 0-3.5-1.57-3.5-3.5S10.07 7.5 12 7.5s3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/>
+                </svg>
+            `),
+            iconSize: [40, 40],
+            iconAnchor: [20, 40],
+            popupAnchor: [0, -40]
+        });
+
+        // Actualizar marcadores en el mapa
+        function updateBusMarkers(buses) {
+            // Limpiar marcadores antiguos que ya no existen
+            Object.keys(markers).forEach(busId => {
+                if (!buses.find(b => b.bus_id == busId)) {
+                    map.removeLayer(markers[busId]);
+                    delete markers[busId];
+                }
+            });
+
+            // Agregar o actualizar marcadores
+            buses.forEach(bus => {
+                const position = [bus.latitude, bus.longitude];
+                const isSelected = selectedBus && selectedBus.bus_id === bus.bus_id;
+
+                if (markers[bus.bus_id]) {
+                    // Actualizar posición del marcador existente
+                    markers[bus.bus_id].setLatLng(position);
+                    markers[bus.bus_id].setIcon(isSelected ? busIconSelected : busIcon);
+                } else {
+                    // Crear nuevo marcador
+                    const marker = L.marker(position, {
+                        icon: isSelected ? busIconSelected : busIcon
+                    }).addTo(map);
+
+                    marker.bindPopup(`
+                        <strong>${bus.bus_plate}</strong><br>
+                        ${bus.ruta_nombre}<br>
+                        Chofer: ${bus.driver_name}
+                    `);
+
+                    // Click en marcador para mostrar info
+                    marker.on('click', () => {
+                        selectBus(bus);
+                    });
+
+                    markers[bus.bus_id] = marker;
+                }
+            });
+
+            // Auto-ajustar zoom si hay buses
+            if (buses.length > 0) {
+                const bounds = L.latLngBounds(buses.map(b => [b.latitude, b.longitude]));
+                map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+            }
+        }
+
+        // Mostrar información del bus seleccionado
+        function selectBus(bus) {
+            selectedBus = bus;
+
+            // Actualizar iconos
+            Object.keys(markers).forEach(busId => {
+                const isSelected = busId == bus.bus_id;
+                markers[busId].setIcon(isSelected ? busIconSelected : busIcon);
+            });
 
             const html = `
-                <div class="space-y-3">
-                    <h3 class="text-lg font-bold text-gray-800 mb-4">Buses Activos</h3>
-                    ${buses.map(bus => `
-                        <div class="bg-white rounded-lg p-4 shadow-sm border-l-4 border-blue-500 hover:shadow-md transition-shadow cursor-pointer"
-                             onclick='selectBus(${JSON.stringify(bus)})'>
-                            <div class="flex items-center justify-between mb-2">
-                                <div class="text-lg font-bold text-gray-800">${bus.bus_plate}</div>
-                                <span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                                    ${bus.ruta_nombre}
-                                </span>
-                            </div>
-                            <div class="text-sm text-gray-600">
-                                <div>👨‍✈️ ${bus.driver_name}</div>
-                                <div>💰 Bs ${bus.trip_earnings}</div>
-                                ${bus.speed ? `<div>🚀 ${bus.speed.toFixed(1)} km/h</div>` : ''}
+                <div class="space-y-4">
+                    <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 rounded-lg -mx-6 -mt-6 mb-4">
+                        <div class="text-sm font-semibold mb-1">${bus.ruta_nombre}</div>
+                        <div class="text-2xl font-bold">${bus.bus_plate}</div>
+                        ${bus.ruta_descripcion ? `<div class="text-xs opacity-90">${bus.ruta_descripcion}</div>` : ''}
+                    </div>
+
+                    <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+                        <div class="text-xs text-gray-500 mb-1">Chofer</div>
+                        <div class="text-lg font-semibold text-gray-800">${bus.driver_name}</div>
+                        <div class="text-xs text-gray-500 mt-1">ID: ${bus.driver_id}</div>
+                    </div>
+
+                    <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+                        <div class="text-xs text-gray-500 mb-1">Estado del Viaje</div>
+                        <div class="text-base font-bold ${bus.trip_status === 'activo' ? 'text-green-600' : 'text-gray-600'}">
+                            ${bus.trip_status === 'activo' ? '✅ Activo' : '⏸️ Finalizado'}
+                        </div>
+                        <div class="text-xs text-gray-500 mt-1">ID Viaje: ${bus.trip_id || 'N/A'}</div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="bg-white rounded-lg p-3 shadow-sm border border-gray-200">
+                            <div class="text-xs text-gray-500 mb-1">⏰ Hora de Salida</div>
+                            <div class="text-base font-bold text-gray-800">${bus.trip_start_formatted || '-'}</div>
+                        </div>
+                        <div class="bg-white rounded-lg p-3 shadow-sm border ${bus.trip_end_formatted === 'En curso' ? 'border-yellow-300 bg-yellow-50' : 'border-green-300 bg-green-50'}">
+                            <div class="text-xs text-gray-500 mb-1">🔄 Conclusión del Viaje</div>
+                            <div class="text-base font-bold ${bus.trip_end_formatted === 'En curso' ? 'text-yellow-600' : 'text-green-600'}">
+                                ${bus.trip_end_formatted}
                             </div>
                         </div>
-                    `).join('')}
+                    </div>
+
+                    <div class="bg-gradient-to-r from-green-50 to-green-100 rounded-lg p-4 border border-green-200">
+                        <div class="text-xs text-green-700 font-semibold mb-1">Monto Acumulado del Viaje</div>
+                        <div class="text-3xl font-bold text-green-700">Bs ${bus.trip_earnings}</div>
+                    </div>
+
+                    ${bus.speed ? `
+                        <div class="bg-white rounded-lg p-3 shadow-sm border border-gray-200">
+                            <div class="text-xs text-gray-500 mb-1">Velocidad Actual</div>
+                            <div class="text-lg font-bold text-gray-800">${bus.speed.toFixed(1)} km/h</div>
+                        </div>
+                    ` : ''}
+
+                    ${bus.has_report ? `
+                        <div class="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
+                            <div class="text-xs text-yellow-700 font-semibold mb-2">📝 Reporte del Chofer</div>
+                            <div class="text-sm text-gray-700 whitespace-pre-wrap">${bus.trip_report || 'Sin reporte'}</div>
+                        </div>
+                    ` : `
+                        <div class="bg-gray-50 rounded-lg p-3 border border-gray-200 text-center">
+                            <div class="text-xs text-gray-500">Sin reporte disponible</div>
+                        </div>
+                    `}
+
+                    <div class="text-xs text-gray-500 text-center pt-2 border-t">
+                        Última actualización: ${bus.last_update}
+                    </div>
                 </div>
             `;
 
@@ -214,129 +280,13 @@
             `;
         }
 
-        // Actualizar marcadores en el mapa
-        function updateBusMarkers(buses) {
-            // Limpiar marcadores antiguos que ya no existen
-            Object.keys(markers).forEach(busId => {
-                if (!buses.find(b => b.bus_id == busId)) {
-                    markers[busId].setMap(null);
-                    delete markers[busId];
-                }
-            });
-
-            // Agregar o actualizar marcadores
-            buses.forEach(bus => {
-                const position = { lat: bus.latitude, lng: bus.longitude };
-
-                if (markers[bus.bus_id]) {
-                    // Actualizar posición del marcador existente
-                    markers[bus.bus_id].setPosition(position);
-                } else {
-                    // Crear nuevo marcador
-                    const marker = new google.maps.Marker({
-                        position: position,
-                        map: map,
-                        title: `${bus.ruta_nombre} - ${bus.bus_plate}`,
-                        icon: {
-                            url: 'http://maps.google.com/mapfiles/ms/icons/bus.png'
-                        },
-                        animation: google.maps.Animation.DROP
-                    });
-
-                    // Click en marcador para mostrar info
-                    marker.addListener('click', () => {
-                        selectBus(bus);
-                    });
-
-                    markers[bus.bus_id] = marker;
-                }
-            });
-        }
-
-        // Mostrar información del bus seleccionado
-        function selectBus(bus) {
-            selectedBus = bus;
-
-            const html = `
-                <div class="space-y-4">
-                    <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 rounded-lg -mx-6 -mt-6 mb-4">
-                        <div class="text-sm font-semibold mb-1">${bus.ruta_nombre}</div>
-                        <div class="text-2xl font-bold">${bus.bus_plate}</div>
-                    </div>
-
-                    <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
-                        <div class="text-xs text-gray-500 mb-1">Chofer</div>
-                        <div class="text-lg font-semibold text-gray-800">${bus.driver_name}</div>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-3">
-                        <div class="bg-white rounded-lg p-3 shadow-sm border border-gray-200">
-                            <div class="text-xs text-gray-500 mb-1">Hora Salida</div>
-                            <div class="text-base font-bold text-gray-800">${bus.trip_start_formatted || '-'}</div>
-                        </div>
-                        <div class="bg-white rounded-lg p-3 shadow-sm border border-gray-200">
-                            <div class="text-xs text-gray-500 mb-1">Hora Llegada</div>
-                            <div class="text-base font-bold ${bus.trip_end_formatted === 'En curso' ? 'text-yellow-600' : 'text-gray-800'}">
-                                ${bus.trip_end_formatted}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="bg-gradient-to-r from-green-50 to-green-100 rounded-lg p-4 border border-green-200">
-                        <div class="text-xs text-green-700 font-semibold mb-1">Monto Acumulado</div>
-                        <div class="text-3xl font-bold text-green-700">Bs ${bus.trip_earnings}</div>
-                    </div>
-
-                    ${bus.speed ? `
-                        <div class="bg-white rounded-lg p-3 shadow-sm border border-gray-200">
-                            <div class="text-xs text-gray-500 mb-1">Velocidad</div>
-                            <div class="text-lg font-bold text-gray-800">${bus.speed.toFixed(1)} km/h</div>
-                        </div>
-                    ` : ''}
-
-                    <div class="text-xs text-gray-500 text-center pt-2 border-t">
-                        Última actualización: ${bus.last_update}
-                    </div>
-                </div>
-            `;
-
-            document.getElementById('busInfo').innerHTML = html;
-        }
-
         // Event listener para filtro
         document.getElementById('rutaFilter').addEventListener('change', loadActiveBuses);
 
-        // Configuración de Google Maps API Key
-        const GOOGLE_MAPS_API_KEY = '{{ env("GOOGLE_MAPS_API_KEY", "") }}';
-        const HAS_API_KEY = GOOGLE_MAPS_API_KEY && GOOGLE_MAPS_API_KEY !== '' && GOOGLE_MAPS_API_KEY !== 'TU_API_KEY_AQUI';
-
-        // Solo cargar Google Maps si hay API Key válida
-        if (HAS_API_KEY) {
-            window.initMap = initMap;
-
-            // Cargar script de Google Maps dinámicamente
-            const script = document.createElement('script');
-            script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&callback=initMap&loading=async`;
-            script.async = true;
-            script.defer = true;
-            script.onerror = function() {
-                console.error('Error al cargar Google Maps');
-                initMap(); // Iniciar sin mapa
-            };
-            document.head.appendChild(script);
-
-            // Timeout de seguridad
-            setTimeout(function() {
-                if (!hasGoogleMaps) {
-                    console.warn('Google Maps no se cargó en 5 segundos. Iniciando sin mapa.');
-                    initMap();
-                }
-            }, 5000);
-        } else {
-            // No hay API Key, iniciar sin mapa
-            console.info('Google Maps API Key no configurada. Iniciando en modo lista.');
+        // Iniciar mapa cuando el DOM esté listo
+        document.addEventListener('DOMContentLoaded', function() {
             initMap();
-        }
+        });
     </script>
     @endpush
 </x-app-layout>

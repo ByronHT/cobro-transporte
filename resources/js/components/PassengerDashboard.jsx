@@ -2,6 +2,8 @@ import React, { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import ComplaintsSection from './ComplaintsSection';
+import BusMap from './BusMap';
+import BusInfoModal from './BusInfoModal';
 import { API_BASE_URL, POLLING_INTERVAL } from '../config';
 
 const apiClient = axios.create({
@@ -141,6 +143,8 @@ function PassengerDashboard() {
     const [userLocation, setUserLocation] = useState(null);
     const [loadingLocation, setLoadingLocation] = useState(false);
     const [loadingBuses, setLoadingBuses] = useState(false);
+    const [selectedBus, setSelectedBus] = useState(null);
+    const [showBusModal, setShowBusModal] = useState(false);
 
     useEffect(() => {
         let intervalId;
@@ -407,9 +411,9 @@ function PassengerDashboard() {
         try {
             const response = await apiClient.get(`/api/passenger/nearby-buses`, {
                 params: {
-                    route_id: routeId,
-                    lat: userLocation?.lat,
-                    lng: userLocation?.lng
+                    ruta_id: routeId,
+                    latitude: userLocation?.lat,
+                    longitude: userLocation?.lng
                 }
             });
             setNearbyBuses(response.data.buses || []);
@@ -2041,7 +2045,7 @@ function PassengerDashboard() {
                         </select>
                     </div>
 
-                    {/* Mapa Placeholder */}
+                    {/* Mapa con OpenStreetMap + Leaflet */}
                     <div style={{
                         flex: 1,
                         background: '#e5e7eb',
@@ -2067,102 +2071,91 @@ function PassengerDashboard() {
                                 }}></div>
                                 <p style={{ color: '#64748b', fontSize: '15px' }}>Obteniendo tu ubicación...</p>
                             </div>
-                        ) : userLocation ? (
+                        ) : userLocation && selectedRouteId ? (
                             <>
-                                {/* Mapa simplificado - Muestra ubicación y buses */}
-                                <div style={{
-                                    width: '100%',
-                                    height: '100%',
-                                    background: `
-                                        radial-gradient(circle at 50% 50%, #dbeafe 0%, #bfdbfe 50%, #93c5fd 100%)
-                                    `,
-                                    position: 'relative',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center'
-                                }}>
-                                    {/* Marcador de usuario */}
+                                {/* Mapa real con OpenStreetMap + Leaflet */}
+                                <BusMap
+                                    buses={nearbyBuses}
+                                    userLocation={userLocation}
+                                    center={userLocation}
+                                    zoom={14}
+                                    userRadius={2000}
+                                    onBusClick={(bus) => {
+                                        setSelectedBus(bus);
+                                        setShowBusModal(true);
+                                    }}
+                                    selectedBusId={selectedBus?.bus_id}
+                                    height="100%"
+                                    showUserCircle={true}
+                                />
+
+                                {/* Mensaje flotante de estado */}
+                                {loadingBuses && (
                                     <div style={{
                                         position: 'absolute',
-                                        top: '50%',
+                                        top: '70px',
                                         left: '50%',
-                                        transform: 'translate(-50%, -50%)',
-                                        background: '#10b981',
-                                        borderRadius: '50%',
-                                        width: '20px',
-                                        height: '20px',
-                                        border: '4px solid white',
-                                        boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-                                        zIndex: 100
-                                    }}></div>
-
-                                    {/* Mensaje central */}
-                                    <div style={{
+                                        transform: 'translateX(-50%)',
                                         background: 'white',
-                                        padding: '20px',
-                                        borderRadius: '12px',
+                                        padding: '12px 20px',
+                                        borderRadius: '8px',
                                         boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                                        textAlign: 'center',
-                                        maxWidth: '300px'
+                                        zIndex: 1000,
+                                        fontSize: '13px',
+                                        color: '#10b981',
+                                        fontWeight: '600',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '8px'
                                     }}>
-                                        <p style={{
-                                            fontSize: '16px',
-                                            fontWeight: '600',
-                                            color: '#1e293b',
-                                            margin: '0 0 8px 0'
-                                        }}>
-                                            📍 Tu ubicación actual
-                                        </p>
-                                        <p style={{
-                                            fontSize: '13px',
-                                            color: '#64748b',
-                                            margin: '0 0 12px 0'
-                                        }}>
-                                            Lat: {userLocation.lat.toFixed(6)}<br/>
-                                            Lng: {userLocation.lng.toFixed(6)}
-                                        </p>
-                                        {selectedRouteId && (
-                                            <div style={{
-                                                marginTop: '12px',
-                                                padding: '12px',
-                                                background: '#f0fdf4',
-                                                borderRadius: '8px',
-                                                border: '1px solid #bbf7d0'
-                                            }}>
-                                                {loadingBuses ? (
-                                                    <p style={{ fontSize: '13px', color: '#16a34a', margin: 0 }}>
-                                                        Buscando buses cercanos...
-                                                    </p>
-                                                ) : nearbyBuses.length > 0 ? (
-                                                    <>
-                                                        <p style={{
-                                                            fontSize: '14px',
-                                                            fontWeight: '600',
-                                                            color: '#16a34a',
-                                                            margin: '0 0 8px 0'
-                                                        }}>
-                                                            🚌 {nearbyBuses.length} bus(es) encontrado(s)
-                                                        </p>
-                                                        {nearbyBuses.slice(0, 3).map((bus, idx) => (
-                                                            <div key={bus.id} style={{
-                                                                fontSize: '12px',
-                                                                color: '#15803d',
-                                                                padding: '4px 0'
-                                                            }}>
-                                                                • {bus.plate} - {bus.distance ? `${bus.distance.toFixed(1)} km` : 'En ruta'}
-                                                            </div>
-                                                        ))}
-                                                    </>
-                                                ) : (
-                                                    <p style={{ fontSize: '13px', color: '#f59e0b', margin: 0 }}>
-                                                        No hay buses cercanos en esta línea
-                                                    </p>
-                                                )}
-                                            </div>
-                                        )}
+                                        <div style={{
+                                            border: '2px solid #f3f4f6',
+                                            borderTop: '2px solid #10b981',
+                                            borderRadius: '50%',
+                                            width: '16px',
+                                            height: '16px',
+                                            animation: 'spin 1s linear infinite'
+                                        }}></div>
+                                        Buscando buses cercanos...
                                     </div>
-                                </div>
+                                )}
+
+                                {!loadingBuses && nearbyBuses.length === 0 && (
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: '70px',
+                                        left: '50%',
+                                        transform: 'translateX(-50%)',
+                                        background: 'white',
+                                        padding: '12px 20px',
+                                        borderRadius: '8px',
+                                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                        zIndex: 1000,
+                                        fontSize: '13px',
+                                        color: '#f59e0b',
+                                        fontWeight: '600'
+                                    }}>
+                                        No hay buses activos cercanos en esta línea
+                                    </div>
+                                )}
                             </>
+                        ) : userLocation ? (
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                height: '100%',
+                                flexDirection: 'column',
+                                gap: '12px',
+                                padding: '20px'
+                            }}>
+                                <svg xmlns="http://www.w3.org/2000/svg" style={{ width: '48px', height: '48px', color: '#64748b' }} viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+                                </svg>
+                                <p style={{ color: '#64748b', fontSize: '15px', textAlign: 'center' }}>
+                                    Selecciona una línea para ver buses cercanos
+                                </p>
+                            </div>
                         ) : (
                             <div style={{
                                 display: 'flex',
@@ -2365,6 +2358,17 @@ function PassengerDashboard() {
                     <span style={{ fontSize: '10px', fontWeight: activeTab === 'quejas' && !showFindLineView ? '700' : '500' }}>Quejas</span>
                 </button>
             </div>
+
+            {/* Modal de información del bus */}
+            <BusInfoModal
+                isOpen={showBusModal}
+                onClose={() => {
+                    setShowBusModal(false);
+                    setSelectedBus(null);
+                }}
+                bus={selectedBus}
+                userLocation={userLocation}
+            />
         </div>
     );
 }
