@@ -335,7 +335,13 @@ function PassengerDashboard() {
         };
 
         fetchData(); // Primera carga
-        intervalId = setInterval(fetchData, POLLING_INTERVAL); // Actualizar cada 60 segundos
+        intervalId = setInterval(fetchData, POLLING_INTERVAL); // Actualizar cada 5 segundos
+
+        // Cargar transacciones iniciales (necesario para vista de devoluciones)
+        loadTransactions();
+
+        // Cargar solicitudes de devolución
+        loadRefundRequests();
 
         return () => {
             isMounted = false;

@@ -112,11 +112,18 @@ class BusLocation extends Model
         $latDegrees = $radiusKm / 111; // 1 grado ≈ 111 km
         $lonDegrees = $radiusKm / (111 * cos(deg2rad($latitude)));
 
-        // Obtener ubicaciones recientes en un cuadrado aproximado (filtro rápido)
-        $locations = self::where('is_active', true)
+        // Obtener solo la ubicación MÁS RECIENTE de cada bus (evita duplicados)
+        // Usando subquery para obtener el MAX(id) agrupado por bus_id
+        $latestLocationIds = self::selectRaw('MAX(id) as latest_id')
+            ->where('is_active', true)
             ->where('recorded_at', '>=', now()->subMinutes($minutesAgo))
             ->whereBetween('latitude', [$latitude - $latDegrees, $latitude + $latDegrees])
             ->whereBetween('longitude', [$longitude - $lonDegrees, $longitude + $lonDegrees])
+            ->groupBy('bus_id')
+            ->pluck('latest_id');
+
+        // Obtener las ubicaciones completas usando los IDs encontrados
+        $locations = self::whereIn('id', $latestLocationIds)
             ->with(['bus.ruta', 'driver', 'trip'])
             ->get();
 
