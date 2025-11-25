@@ -50,6 +50,9 @@ function DriverDashboard() {
     // isInitialLoad ahora solo es true la primera vez en esta sesión
     const isInitialLoadRef = useRef(true);
 
+    // Set para trackear eventos ya notificados (evita duplicados)
+    const notifiedEventsRef = useRef(new Set());
+
     // Estados para sistema de reportes
     const [tripReport, setTripReport] = useState('');
     const [tripReportPhoto, setTripReportPhoto] = useState(null);
@@ -118,11 +121,15 @@ function DriverDashboard() {
     };
 
     const fetchDriverData = async () => {
-        // Solo mostrar loading en la primera carga
-        if (!driverData && !isTripActive) {
+        // Solo mostrar loading en la primera carga absoluta
+        const isFirstLoad = !driverData && !isTripActive;
+        if (isFirstLoad) {
             setLoading(true);
         }
-        setError(null);
+        // No limpiar error en actualizaciones silenciosas para no interrumpir UI
+        if (isFirstLoad) {
+            setError(null);
+        }
 
         try {
             const statusResponse = await apiClient.get('/api/driver/current-trip-status');
@@ -169,7 +176,17 @@ function DriverDashboard() {
                 if (!wasInitialLoad) {
                     console.log('🔔 [DRIVER] Mostrando notificaciones para', newEvents.length, 'eventos');
                     newEvents.forEach(event => {
+                        // Verificar si ya se notificó este evento (evita duplicados)
+                        if (notifiedEventsRef.current.has(event.id)) {
+                            console.log('🔔 [DRIVER] Evento ya notificado, omitiendo:', event.id);
+                            return; // Skip este evento
+                        }
+
                         console.log('🔔 [DRIVER] Evento:', event.event_type, event.message);
+
+                        // Marcar como notificado ANTES de mostrar
+                        notifiedEventsRef.current.add(event.id);
+
                         if (event.event_type === 'success') {
                             showNotification({
                                 type: 'success',
@@ -268,12 +285,15 @@ function DriverDashboard() {
                 }
             } else {
                 // No mostrar error en recargas automáticas
-                if (!driverData) {
+                if (isFirstLoad) {
                     setError('Error al cargar datos del chofer.');
                 }
             }
         } finally {
-            setLoading(false);
+            // Solo ocultar loading si fue una carga inicial
+            if (isFirstLoad) {
+                setLoading(false);
+            }
         }
     };
 

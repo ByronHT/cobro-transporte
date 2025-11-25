@@ -120,6 +120,9 @@ function PassengerDashboard() {
     const isInitialLoadRef = useRef(true);
     const qrCodeRef = useRef(null);
 
+    // Set para trackear eventos ya notificados (evita duplicados)
+    const notifiedEventsRef = useRef(new Set());
+
     // Estados para sistema de devoluciones
     const [refundRequests, setRefundRequests] = useState([]);
     const [showRefundSection, setShowRefundSection] = useState(false);
@@ -157,8 +160,9 @@ function PassengerDashboard() {
                 return;
             }
 
-            // Solo mostrar loading en la primera carga
-            if (!user) {
+            // Solo mostrar loading en la primera carga absoluta
+            const isFirstLoad = !user;
+            if (isFirstLoad) {
                 setLoading(true);
             }
 
@@ -219,7 +223,17 @@ function PassengerDashboard() {
                     if (!wasInitialLoad) {
                         console.log('🔔 [PASSENGER] Mostrando notificaciones para', newEvents.length, 'eventos');
                         newEvents.forEach(event => {
+                            // Verificar si ya se notificó este evento (evita duplicados)
+                            if (notifiedEventsRef.current.has(event.id)) {
+                                console.log('🔔 [PASSENGER] Evento ya notificado, omitiendo:', event.id);
+                                return; // Skip este evento
+                            }
+
                             console.log('🔔 [PASSENGER] Evento:', event.event_type, event.message);
+
+                            // Marcar como notificado ANTES de mostrar
+                            notifiedEventsRef.current.add(event.id);
+
                             if (event.event_type === 'success') {
                                 const rutaInfo = event.trip?.bus?.ruta
                                     ? `${event.trip.bus.ruta.nombre}${event.trip.bus.ruta.descripcion ? ' - ' + event.trip.bus.ruta.descripcion : ''}`
@@ -291,7 +305,7 @@ function PassengerDashboard() {
             } catch (err) {
                 console.error('Error en Dashboard:', err.response?.data || err.message);
                 // Solo mostrar error en la primera carga
-                if (!user && isMounted) {
+                if (isFirstLoad && isMounted) {
                     setError(`No se pudieron cargar los datos: ${err.response?.data?.message || err.message}`);
                 }
                 if (err.response && err.response.status === 401) {
@@ -313,7 +327,8 @@ function PassengerDashboard() {
                     }
                 }
             } finally {
-                if (isMounted) {
+                // Solo ocultar loading si fue una carga inicial
+                if (isFirstLoad && isMounted) {
                     setLoading(false);
                 }
             }
@@ -468,8 +483,9 @@ function PassengerDashboard() {
 
         setRefundActionLoading(true);
         try {
+            // selectedTrip es una transacción, su ID es el transaction_id
             const response = await apiClient.post('/api/passenger/request-refund', {
-                transaction_id: selectedTrip.transaction_id,
+                transaction_id: selectedTrip.id,  // Usar el ID de la transacción directamente
                 reason: refundReason
             });
 
@@ -984,18 +1000,146 @@ function PassengerDashboard() {
 
     // Función para renderizar la pantalla de Devoluciones (Historial de solicitudes)
     const renderDevolucionesScreen = () => {
+        // Filtrar solo transacciones de tipo 'fare' (pagos de pasajes)
+        const fareTransactions = transactions.filter(tx => tx.type === 'fare').slice(0, 8);
+
+        // Función helper para verificar si ya existe solicitud activa para una transacción
+        const hasActiveRefundRequest = (transactionId) => {
+            return refundRequests.some(req =>
+                req.transaction_id === transactionId &&
+                (req.status === 'pending' || req.status === 'verified' || req.status === 'completed')
+            );
+        };
+
         return (
             <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
                 <h2 style={{ color: 'white', fontSize: '24px', fontWeight: '700', marginBottom: '20px' }}>
-                    Mis Solicitudes de Devolución
+                    Solicitar Devolución
                 </h2>
 
+                {/* SECCIÓN 1: Últimos 8 pagos con botón de solicitar */}
+                <div style={{
+                    background: 'white',
+                    borderRadius: '16px',
+                    padding: '24px',
+                    boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
+                    marginBottom: '24px'
+                }}>
+                    <h3 style={{
+                        fontSize: '18px',
+                        fontWeight: '600',
+                        marginBottom: '16px',
+                        color: '#1e293b'
+                    }}>
+                        Últimos Pagos de Pasajes
+                    </h3>
+
+                    {fareTransactions.length === 0 ? (
+                        <div style={{
+                            textAlign: 'center',
+                            padding: '40px 20px',
+                            color: '#9ca3af'
+                        }}>
+                            <p style={{ fontSize: '16px', margin: 0 }}>No tienes pagos registrados</p>
+                        </div>
+                    ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            {fareTransactions.map(tx => {
+                                const hasRefund = hasActiveRefundRequest(tx.id);
+
+                                return (
+                                    <div key={tx.id} style={{
+                                        padding: '16px',
+                                        background: '#f8fafc',
+                                        borderRadius: '12px',
+                                        border: '1px solid #e2e8f0'
+                                    }}>
+                                        {/* Información del pago */}
+                                        <div style={{
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                            marginBottom: '12px'
+                                        }}>
+                                            <div style={{ flex: 1 }}>
+                                                <p style={{ fontWeight: '600', margin: '0 0 4px 0', color: '#1e293b' }}>
+                                                    {tx.description || 'Pago de pasaje'}
+                                                </p>
+                                                <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>
+                                                    {formatBoliviaDate(tx.created_at)}
+                                                </p>
+                                            </div>
+
+                                            <span style={{
+                                                fontWeight: '700',
+                                                color: '#f59e0b',
+                                                fontSize: '18px',
+                                                marginLeft: '12px'
+                                            }}>
+                                                {parseFloat(tx.amount).toFixed(2)} Bs
+                                            </span>
+                                        </div>
+
+                                        {/* Botón debajo */}
+                                        {hasRefund ? (
+                                            <div style={{
+                                                padding: '10px',
+                                                background: '#fef3c7',
+                                                color: '#92400e',
+                                                borderRadius: '8px',
+                                                fontSize: '14px',
+                                                fontWeight: '600',
+                                                textAlign: 'center'
+                                            }}>
+                                                ✓ Devolución ya solicitada
+                                            </div>
+                                        ) : (
+                                            <button
+                                                onClick={() => {
+                                                    setSelectedTrip(tx);
+                                                    setShowRequestRefundModal(true);
+                                                }}
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '12px 16px',
+                                                    background: '#8b5cf6',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    borderRadius: '8px',
+                                                    cursor: 'pointer',
+                                                    fontSize: '14px',
+                                                    fontWeight: '600',
+                                                    transition: 'background 0.2s'
+                                                }}
+                                                onMouseOver={(e) => e.target.style.background = '#7c3aed'}
+                                                onMouseOut={(e) => e.target.style.background = '#8b5cf6'}
+                                            >
+                                                💰 Solicitar Devolución
+                                            </button>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+
+                {/* SECCIÓN 2: Mis solicitudes de devolución */}
                 <div style={{
                     background: 'white',
                     borderRadius: '16px',
                     padding: '24px',
                     boxShadow: '0 10px 30px rgba(0,0,0,0.1)'
                 }}>
+                    <h3 style={{
+                        fontSize: '18px',
+                        fontWeight: '600',
+                        marginBottom: '16px',
+                        color: '#1e293b'
+                    }}>
+                        Mis Solicitudes de Devolución
+                    </h3>
+
                     {refundRequests.length === 0 ? (
                         <div style={{
                             textAlign: 'center',
