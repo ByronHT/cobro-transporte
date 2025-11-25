@@ -23,23 +23,32 @@ class PaymentController extends Controller
             'trip_id' => 'required|integer|exists:trips,id'
         ]);
 
-        $card = Card::where('uid', $request->uid)->where('active', true)->first();
+        // Buscar la tarjeta y cargar la relación con el usuario (pasajero)
+        $card = Card::with('passenger')->where('uid', $request->uid)->first();
         $trip = Trip::with(['bus.ruta', 'driver'])->where('id', $request->trip_id)->whereNull('fin')->first();
 
         // 1. Validar que el viaje esté activo
         if (!$trip) {
-            return response()->json(['status' => 'error', 'message' => 'VIAJE_NO_ACTIVO'], 404);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'VIAJE_NO_ACTIVO',
+                'display_message' => 'No hay viaje activo'
+            ], 404);
         }
 
         // 2. Validar que el viaje esté bien configurado
         if (!$trip->driver || !$trip->bus || !$trip->bus->ruta || !$trip->bus->ruta->tarifa_base) {
-            return response()->json(['status' => 'error', 'message' => 'VIAJE_MAL_CONFIGURADO'], 400);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'VIAJE_MAL_CONFIGURADO',
+                'display_message' => 'Error de configuracion'
+            ], 400);
         }
 
         $fare = $trip->bus->ruta->tarifa_base;
         $driver = $trip->driver;
 
-        // 3. Validar la tarjeta del pasajero
+        // 3. Validar la tarjeta del pasajero - TARJETA NO REGISTRADA
         if (!$card) {
             // Registrar evento de tarjeta inválida
             PaymentEvent::create([
@@ -53,10 +62,14 @@ class PaymentController extends Controller
                 'message' => 'Tarjeta no registrada en el sistema. UID: ' . $request->uid
             ]);
 
-            return response()->json(['status' => 'error', 'message' => 'TARJETA_INVALIDA'], 404);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'TARJETA_NO_REGISTRADA',
+                'display_message' => 'Tarjeta no registrada'
+            ], 404);
         }
 
-        // 3.5 Validar que la tarjeta esté activa
+        // 3.5 Validar que la tarjeta esté activa - TARJETA NO ACTIVA
         if (!$card->active) {
             // Registrar evento de tarjeta inactiva
             PaymentEvent::create([
@@ -70,10 +83,14 @@ class PaymentController extends Controller
                 'message' => 'Tarjeta inactiva. Contacte al administrador.'
             ]);
 
-            return response()->json(['status' => 'error', 'message' => 'TARJETA_INACTIVA'], 403);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'TARJETA_NO_ACTIVA',
+                'display_message' => 'Tarjeta no activa'
+            ], 403);
         }
 
-        // 4. Validar Saldo
+        // 4. Validar Saldo - SALDO INSUFICIENTE
         if ($card->balance < $fare) {
             // Registrar evento de saldo insuficiente
             PaymentEvent::create([
@@ -90,6 +107,7 @@ class PaymentController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => 'SALDO_INSUFICIENTE',
+                'display_message' => 'Saldo insuficiente',
                 'current_balance' => number_format($card->balance, 2),
                 'required_amount' => number_format($fare, 2)
             ], 402);
@@ -132,10 +150,18 @@ class PaymentController extends Controller
                 'message' => 'Pago realizado con éxito. Monto: ' . number_format($fare, 2) . ' Bs'
             ]);
 
+            // Recargar la tarjeta con el balance actualizado
+            $card->refresh();
+
+            // Obtener nombre del pasajero
+            $passengerName = $card->passenger ? $card->passenger->name : 'Pasajero';
+
             return response()->json([
                 'status' => 'success',
                 'message' => 'PAGO_REALIZADO',
-                'new_card_balance' => number_format($card->balance, 2),
+                'display_message' => 'Pago exitoso',
+                'passenger_name' => $passengerName,
+                'new_balance' => number_format($card->balance, 2),
                 'amount_charged' => number_format($fare, 2)
             ]);
 
@@ -159,7 +185,11 @@ class PaymentController extends Controller
                 Log::error('Error registrando evento de pago: ' . $logError->getMessage());
             }
 
-            return response()->json(['status' => 'error', 'message' => 'ERROR_SERVIDOR'], 500);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'ERROR_SERVIDOR',
+                'display_message' => 'Error del servidor'
+            ], 500);
         }
     }
 }

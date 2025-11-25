@@ -161,7 +161,29 @@ export function useGPSTracking({ busId, isTripActive, token, apiBaseUrl }) {
      */
     const handleError = (error) => {
         console.error('❌ [GPS] Error obteniendo ubicación:', error);
-        setError(`Error GPS: ${error.message}`);
+
+        let errorMessage = 'Error desconocido';
+
+        // Manejar diferentes códigos de error
+        if (error.code) {
+            switch (error.code) {
+                case 1: // PERMISSION_DENIED
+                    errorMessage = 'Permisos de ubicación denegados. Actívalos en configuración.';
+                    break;
+                case 2: // POSITION_UNAVAILABLE
+                    errorMessage = 'Ubicación no disponible. Verifica que el GPS esté activado.';
+                    break;
+                case 3: // TIMEOUT
+                    errorMessage = 'Timeout al obtener ubicación. Intenta de nuevo.';
+                    break;
+                default:
+                    errorMessage = error.message || 'Error al obtener ubicación';
+            }
+        } else {
+            errorMessage = error.message || 'Error al obtener ubicación';
+        }
+
+        setError(errorMessage);
     };
 
     /**
@@ -197,6 +219,25 @@ export function useGPSTracking({ busId, isTripActive, token, apiBaseUrl }) {
                 try {
                     const { Geolocation } = window.Capacitor.Plugins;
 
+                    // 1. Solicitar permisos explícitamente
+                    console.log('🔐 [GPS] Solicitando permisos de ubicación...');
+                    const permissionStatus = await Geolocation.checkPermissions();
+                    console.log('🔐 [GPS] Estado de permisos:', permissionStatus);
+
+                    // Si no tiene permisos, solicitarlos
+                    if (permissionStatus.location !== 'granted') {
+                        console.log('📝 [GPS] Solicitando permisos al usuario...');
+                        const requestResult = await Geolocation.requestPermissions();
+                        console.log('📝 [GPS] Resultado de solicitud:', requestResult);
+
+                        if (requestResult.location !== 'granted') {
+                            throw new Error('El usuario rechazó los permisos de ubicación. Por favor, activa la ubicación en la configuración de la app.');
+                        }
+                    }
+
+                    // 2. Permisos concedidos, iniciar tracking
+                    console.log('✅ [GPS] Permisos concedidos, iniciando tracking...');
+
                     watchIdRef.current = await Geolocation.watchPosition(options, (position, err) => {
                         if (err) {
                             handleError(err);
@@ -208,7 +249,8 @@ export function useGPSTracking({ busId, isTripActive, token, apiBaseUrl }) {
                     console.log('✅ [GPS] Watch iniciado con ID:', watchIdRef.current);
                 } catch (err) {
                     console.error('❌ [GPS] Error iniciando Capacitor watch:', err);
-                    setError(err.message);
+                    setError(err.message || 'Error al iniciar GPS');
+                    setIsTracking(false);
                 }
             };
 

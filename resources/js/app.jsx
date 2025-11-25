@@ -8,10 +8,48 @@ import {
     Navigate
 } from 'react-router-dom';
 
+// Importar Capacitor
+import { Capacitor } from '@capacitor/core';
+
 import PassengerDashboard from './components/PassengerDashboard'; // Panel del Pasajero
 import DriverDashboard from './components/DriverDashboard'; // Panel del Chofer
 import LoginUnificado from './components/LoginUnificado'; // Login Unificado
 import NoInternetModal from './components/NoInternetModal'; // Modal de Sin Conexion
+
+// Error Boundary para capturar errores
+class ErrorBoundary extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = { hasError: false, error: null };
+    }
+
+    static getDerivedStateFromError(error) {
+        return { hasError: true, error };
+    }
+
+    componentDidCatch(error, errorInfo) {
+        console.error('Error capturado:', error, errorInfo);
+    }
+
+    render() {
+        if (this.state.hasError) {
+            return (
+                <div style={{
+                    padding: '20px',
+                    textAlign: 'center',
+                    fontFamily: 'system-ui'
+                }}>
+                    <h2>Error en la aplicación</h2>
+                    <p>{this.state.error?.message || 'Error desconocido'}</p>
+                    <button onClick={() => window.location.reload()}>
+                        Recargar App
+                    </button>
+                </div>
+            );
+        }
+        return this.props.children;
+    }
+}
 
 // Componente para proteger rutas de CHOFERES
 function DriverProtectedRoute({ children }) {
@@ -88,7 +126,9 @@ function App() {
 
 const root = ReactDOM.createRoot(document.getElementById('app'));
 root.render(
-    <React.StrictMode>
-        <App />
-    </React.StrictMode>
+    <ErrorBoundary>
+        <React.StrictMode>
+            <App />
+        </React.StrictMode>
+    </ErrorBoundary>
 );

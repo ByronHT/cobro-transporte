@@ -7,13 +7,15 @@ console.log('📦 Ejecutando post-build para Capacitor...');
 const assetsDir = path.join(__dirname, 'public', 'build', 'assets');
 const files = fs.readdirSync(assetsDir);
 
-const cssFile = files.find(f => f.endsWith('.css'));
+const cssFiles = files.filter(f => f.endsWith('.css'));
 const jsFile = files.find(f => f.endsWith('.js'));
 
-console.log(`✅ CSS encontrado: ${cssFile}`);
+console.log(`✅ CSS encontrados: ${cssFiles.join(', ')}`);
 console.log(`✅ JS encontrado: ${jsFile}`);
 
-// Crear index.html
+// Crear index.html con todos los archivos CSS
+const cssLinks = cssFiles.map(css => `    <link rel="stylesheet" href="/assets/${css}">`).join('\n');
+
 const indexHtml = `<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -27,7 +29,7 @@ const indexHtml = `<!DOCTYPE html>
     <link rel="manifest" href="/manifest.json">
     <link rel="icon" type="image/png" href="/img/logo_fondotrasnparente.png">
     <link rel="apple-touch-icon" href="/img/logo_fondotrasnparente.png">
-    <link rel="stylesheet" href="/assets/${cssFile}">
+${cssLinks}
     <style>
         * {
             margin: 0;
