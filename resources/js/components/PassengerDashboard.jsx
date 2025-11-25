@@ -201,6 +201,12 @@ function PassengerDashboard() {
                     setTrips(tripsResponse.data.data);
                 }
 
+                // Cargar transacciones (necesario para vista de devoluciones)
+                const transactionsResponse = await apiClient.get('/api/transactions');
+                if (isMounted) {
+                    setTransactions(transactionsResponse.data);
+                }
+
                 // Consultar eventos de pago nuevos
                 const eventsResponse = await apiClient.get(`/api/passenger/payment-events?last_event_id=${lastEventId}`);
                 const newEvents = eventsResponse.data;
@@ -334,13 +340,10 @@ function PassengerDashboard() {
             }
         };
 
-        fetchData(); // Primera carga
+        fetchData(); // Primera carga (incluye transactions)
         intervalId = setInterval(fetchData, POLLING_INTERVAL); // Actualizar cada 5 segundos
 
-        // Cargar transacciones iniciales (necesario para vista de devoluciones)
-        loadTransactions();
-
-        // Cargar solicitudes de devolución
+        // Cargar solicitudes de devolución (no están en fetchData)
         loadRefundRequests();
 
         return () => {
