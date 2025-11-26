@@ -61,9 +61,24 @@
         let selectedBus = null;
         let busIcon;
         let busIconSelected;
+        let prevBuses = {}; // Para almacenar posiciones anteriores y calcular rotación
 
         // Centro de Santa Cruz, Bolivia
         const defaultCenter = { lat: -17.7833, lng: -63.1821 };
+
+        // Función para calcular el ángulo entre dos puntos (bearing)
+        function calculateBearing(lat1, lng1, lat2, lng2) {
+            const dLng = (lng2 - lng1) * Math.PI / 180;
+            const lat1Rad = lat1 * Math.PI / 180;
+            const lat2Rad = lat2 * Math.PI / 180;
+
+            const y = Math.sin(dLng) * Math.cos(lat2Rad);
+            const x = Math.cos(lat1Rad) * Math.sin(lat2Rad) -
+                      Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLng);
+
+            const bearing = Math.atan2(y, x) * 180 / Math.PI;
+            return (bearing + 360) % 360; // Normalizar a 0-360
+        }
 
         // Inicializar mapa con Google Maps
         function initMap() {
@@ -85,24 +100,17 @@
             });
 
             // Definir iconos DESPUÉS de que Google Maps esté cargado
+            // Usar iconos SVG isométricos 3D personalizados
             busIcon = {
-                path: 'M12 2C7 2 3 6 3 11c0 5.25 9 13 9 13s9-7.75 9-13c0-5-4-9-9-9zm0 12.5c-1.93 0-3.5-1.57-3.5-3.5S10.07 7.5 12 7.5s3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z',
-                fillColor: '#3b82f6',
-                fillOpacity: 1,
-                strokeColor: '#ffffff',
-                strokeWeight: 2,
-                scale: 1.5,
-                anchor: new google.maps.Point(12, 24)
+                url: '/images/map-icons/bus-3d.svg',
+                scaledSize: new google.maps.Size(64, 64),
+                anchor: new google.maps.Point(32, 58)
             };
 
             busIconSelected = {
-                path: 'M12 2C7 2 3 6 3 11c0 5.25 9 13 9 13s9-7.75 9-13c0-5-4-9-9-9zm0 12.5c-1.93 0-3.5-1.57-3.5-3.5S10.07 7.5 12 7.5s3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z',
-                fillColor: '#ef4444',
-                fillOpacity: 1,
-                strokeColor: '#ffffff',
-                strokeWeight: 3,
-                scale: 2,
-                anchor: new google.maps.Point(12, 24)
+                url: '/images/map-icons/bus-3d-selected.svg',
+                scaledSize: new google.maps.Size(80, 80),
+                anchor: new google.maps.Point(40, 72)
             };
 
             // Cargar buses activos
@@ -154,16 +162,38 @@
                 const position = { lat: bus.latitude, lng: bus.longitude };
                 const isSelected = selectedBus && selectedBus.bus_id === bus.bus_id;
 
+                // Calcular rotación basada en posición anterior
+                let rotation = 0;
+                if (prevBuses[bus.bus_id]) {
+                    rotation = calculateBearing(
+                        prevBuses[bus.bus_id].lat,
+                        prevBuses[bus.bus_id].lng,
+                        bus.latitude,
+                        bus.longitude
+                    );
+                }
+
+                // Guardar posición actual
+                prevBuses[bus.bus_id] = position;
+
+                // Crear icono con rotación
+                const icon = {
+                    url: isSelected ? busIconSelected.url : busIcon.url,
+                    scaledSize: isSelected ? busIconSelected.scaledSize : busIcon.scaledSize,
+                    anchor: isSelected ? busIconSelected.anchor : busIcon.anchor,
+                    rotation: rotation
+                };
+
                 if (markers[bus.bus_id]) {
-                    // Actualizar posición del marcador existente
+                    // Actualizar posición e icono del marcador existente
                     markers[bus.bus_id].setPosition(position);
-                    markers[bus.bus_id].setIcon(isSelected ? busIconSelected : busIcon);
+                    markers[bus.bus_id].setIcon(icon);
                 } else {
                     // Crear nuevo marcador
                     const marker = new google.maps.Marker({
                         position: position,
                         map: map,
-                        icon: isSelected ? busIconSelected : busIcon,
+                        icon: icon,
                         title: bus.bus_plate
                     });
 

@@ -52,12 +52,28 @@ function BusMapGoogle({
 }) {
     const [map, setMap] = useState(null);
     const [selectedMarker, setSelectedMarker] = useState(null);
+    const [busMarkers, setBusMarkers] = useState({});
+    const prevBusesRef = useRef({});
 
     // Usar el hook para cargar Google Maps
     const { isLoaded, loadError } = useGoogleMaps();
 
     // Centro del mapa
     const mapCenter = center || userLocation || defaultCenter;
+
+    // Función para calcular el ángulo entre dos puntos
+    const calculateBearing = (lat1, lng1, lat2, lng2) => {
+        const dLng = (lng2 - lng1) * Math.PI / 180;
+        const lat1Rad = lat1 * Math.PI / 180;
+        const lat2Rad = lat2 * Math.PI / 180;
+
+        const y = Math.sin(dLng) * Math.cos(lat2Rad);
+        const x = Math.cos(lat1Rad) * Math.sin(lat2Rad) -
+                  Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLng);
+
+        const bearing = Math.atan2(y, x) * 180 / Math.PI;
+        return (bearing + 360) % 360; // Normalizar a 0-360
+    };
 
     const onLoad = useCallback((map) => {
         setMap(map);
@@ -192,12 +208,9 @@ function BusMapGoogle({
                                 position={userLocation}
                                 title="Tu ubicación"
                                 icon={{
-                                    path: window.google?.maps?.SymbolPath?.CIRCLE || 0,
-                                    scale: 8,
-                                    fillColor: '#10b981',
-                                    fillOpacity: 1,
-                                    strokeColor: '#ffffff',
-                                    strokeWeight: 3,
+                                    url: '/images/map-icons/user-3d.svg',
+                                    scaledSize: new window.google.maps.Size(48, 48),
+                                    anchor: new window.google.maps.Point(24, 44),
                                 }}
                                 zIndex={2000}
                             />
@@ -224,18 +237,34 @@ function BusMapGoogle({
                         const busId = bus.bus_id || bus.id;
                         const isSelected = selectedBusId === busId;
 
+                        // Calcular rotación basada en posición anterior
+                        let rotation = 0;
+                        if (prevBusesRef.current[busId]) {
+                            const prev = prevBusesRef.current[busId];
+                            rotation = calculateBearing(
+                                prev.latitude,
+                                prev.longitude,
+                                bus.latitude,
+                                bus.longitude
+                            );
+                        }
+
+                        // Guardar posición actual para la próxima actualización
+                        prevBusesRef.current[busId] = {
+                            latitude: bus.latitude,
+                            longitude: bus.longitude
+                        };
+
                         return (
                             <Marker
                                 key={busId}
                                 position={{ lat: bus.latitude, lng: bus.longitude }}
                                 title={bus.bus_plate || bus.plate}
                                 icon={{
-                                    path: window.google?.maps?.SymbolPath?.CIRCLE || 0,
-                                    scale: isSelected ? 12 : 10,
-                                    fillColor: isSelected ? '#ef4444' : '#3b82f6',
-                                    fillOpacity: 1,
-                                    strokeColor: '#ffffff',
-                                    strokeWeight: isSelected ? 3 : 2,
+                                    url: isSelected ? '/images/map-icons/bus-3d-selected.svg' : '/images/map-icons/bus-3d.svg',
+                                    scaledSize: new window.google.maps.Size(isSelected ? 80 : 64, isSelected ? 80 : 64),
+                                    anchor: new window.google.maps.Point(isSelected ? 40 : 32, isSelected ? 72 : 58),
+                                    rotation: rotation
                                 }}
                                 zIndex={isSelected ? 1000 : 100}
                                 onClick={() => {
