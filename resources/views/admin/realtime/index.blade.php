@@ -53,7 +53,7 @@
 
     @push('scripts')
     {{-- Google Maps JavaScript API --}}
-    <script src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google_maps.api_key', env('VITE_GOOGLE_MAPS_API_KEY', 'AIzaSyB1ZmOxDHBgVFwgi0GxXA85HR-cXf6sx8g')) }}&libraries=places,geometry" async defer></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google_maps.api_key', env('VITE_GOOGLE_MAPS_API_KEY', 'AIzaSyB1ZmOxDHBgVFwgi0GxXA85HR-cXf6sx8g')) }}&libraries=places,geometry&callback=initMap&loading=async" async defer></script>
 
     <script>
         let map;
