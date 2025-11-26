@@ -51,31 +51,36 @@
         </div>
     </div>
 
-    {{-- Leaflet CSS --}}
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-
     @push('scripts')
-    {{-- Leaflet JS --}}
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    {{-- Google Maps JavaScript API --}}
+    <script src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google_maps.api_key', env('VITE_GOOGLE_MAPS_API_KEY', 'AIzaSyB1ZmOxDHBgVFwgi0GxXA85HR-cXf6sx8g')) }}&libraries=places,geometry" async defer></script>
 
     <script>
         let map;
         let markers = {};
         let selectedBus = null;
 
-        // Centro de Santa Cruz, Bolivia (ajusta según tu ciudad)
-        const defaultCenter = [-17.7833, -63.1821];
+        // Centro de Santa Cruz, Bolivia
+        const defaultCenter = { lat: -17.7833, lng: -63.1821 };
 
-        // Inicializar mapa con Leaflet + OpenStreetMap
+        // Inicializar mapa con Google Maps
         function initMap() {
             // Crear mapa
-            map = L.map('map').setView(defaultCenter, 13);
-
-            // Agregar capa de OpenStreetMap
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-                maxZoom: 19
-            }).addTo(map);
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: defaultCenter,
+                zoom: 13,
+                mapTypeControl: true,
+                streetViewControl: false,
+                fullscreenControl: true,
+                zoomControl: true,
+                styles: [
+                    {
+                        featureType: 'poi',
+                        elementType: 'labels',
+                        stylers: [{ visibility: 'off' }]
+                    }
+                ]
+            });
 
             // Cargar buses activos
             loadActiveBuses();
@@ -83,6 +88,9 @@
             // Auto-refresh cada 10 segundos
             setInterval(loadActiveBuses, 10000);
         }
+
+        // Esperar a que Google Maps esté listo
+        window.initMap = initMap;
 
         // Cargar buses activos desde el backend
         function loadActiveBuses() {
@@ -108,63 +116,70 @@
                 });
         }
 
-        // Icono personalizado para buses
-        const busIcon = L.icon({
-            iconUrl: 'data:image/svg+xml;base64,' + btoa(`
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#3b82f6" width="32" height="32">
-                    <path d="M12 2C7 2 3 6 3 11c0 5.25 9 13 9 13s9-7.75 9-13c0-5-4-9-9-9zm0 12.5c-1.93 0-3.5-1.57-3.5-3.5S10.07 7.5 12 7.5s3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/>
-                </svg>
-            `),
-            iconSize: [32, 32],
-            iconAnchor: [16, 32],
-            popupAnchor: [0, -32]
-        });
+        // Iconos personalizados para buses (SVG para Google Maps)
+        const busIcon = {
+            path: 'M12 2C7 2 3 6 3 11c0 5.25 9 13 9 13s9-7.75 9-13c0-5-4-9-9-9zm0 12.5c-1.93 0-3.5-1.57-3.5-3.5S10.07 7.5 12 7.5s3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z',
+            fillColor: '#3b82f6',
+            fillOpacity: 1,
+            strokeColor: '#ffffff',
+            strokeWeight: 2,
+            scale: 1.5,
+            anchor: new google.maps.Point(12, 24)
+        };
 
-        const busIconSelected = L.icon({
-            iconUrl: 'data:image/svg+xml;base64,' + btoa(`
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ef4444" width="40" height="40">
-                    <path d="M12 2C7 2 3 6 3 11c0 5.25 9 13 9 13s9-7.75 9-13c0-5-4-9-9-9zm0 12.5c-1.93 0-3.5-1.57-3.5-3.5S10.07 7.5 12 7.5s3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/>
-                </svg>
-            `),
-            iconSize: [40, 40],
-            iconAnchor: [20, 40],
-            popupAnchor: [0, -40]
-        });
+        const busIconSelected = {
+            path: 'M12 2C7 2 3 6 3 11c0 5.25 9 13 9 13s9-7.75 9-13c0-5-4-9-9-9zm0 12.5c-1.93 0-3.5-1.57-3.5-3.5S10.07 7.5 12 7.5s3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z',
+            fillColor: '#ef4444',
+            fillOpacity: 1,
+            strokeColor: '#ffffff',
+            strokeWeight: 3,
+            scale: 2,
+            anchor: new google.maps.Point(12, 24)
+        };
 
         // Actualizar marcadores en el mapa
         function updateBusMarkers(buses) {
             // Limpiar marcadores antiguos que ya no existen
             Object.keys(markers).forEach(busId => {
                 if (!buses.find(b => b.bus_id == busId)) {
-                    map.removeLayer(markers[busId]);
+                    markers[busId].setMap(null);
                     delete markers[busId];
                 }
             });
 
             // Agregar o actualizar marcadores
             buses.forEach(bus => {
-                const position = [bus.latitude, bus.longitude];
+                const position = { lat: bus.latitude, lng: bus.longitude };
                 const isSelected = selectedBus && selectedBus.bus_id === bus.bus_id;
 
                 if (markers[bus.bus_id]) {
                     // Actualizar posición del marcador existente
-                    markers[bus.bus_id].setLatLng(position);
+                    markers[bus.bus_id].setPosition(position);
                     markers[bus.bus_id].setIcon(isSelected ? busIconSelected : busIcon);
                 } else {
                     // Crear nuevo marcador
-                    const marker = L.marker(position, {
-                        icon: isSelected ? busIconSelected : busIcon
-                    }).addTo(map);
+                    const marker = new google.maps.Marker({
+                        position: position,
+                        map: map,
+                        icon: isSelected ? busIconSelected : busIcon,
+                        title: bus.bus_plate
+                    });
 
-                    marker.bindPopup(`
-                        <strong>${bus.bus_plate}</strong><br>
-                        ${bus.ruta_nombre}<br>
-                        Chofer: ${bus.driver_name}
-                    `);
+                    // InfoWindow para el marcador
+                    const infoWindow = new google.maps.InfoWindow({
+                        content: `
+                            <div style="font-family: system-ui;">
+                                <strong style="font-size: 14px;">${bus.bus_plate}</strong><br>
+                                <span style="font-size: 12px; color: #64748b;">${bus.ruta_nombre}</span><br>
+                                <span style="font-size: 11px; color: #64748b;">Chofer: ${bus.driver_name}</span>
+                            </div>
+                        `
+                    });
 
                     // Click en marcador para mostrar info
-                    marker.on('click', () => {
+                    marker.addListener('click', () => {
                         selectBus(bus);
+                        infoWindow.open(map, marker);
                     });
 
                     markers[bus.bus_id] = marker;
@@ -173,8 +188,18 @@
 
             // Auto-ajustar zoom si hay buses
             if (buses.length > 0) {
-                const bounds = L.latLngBounds(buses.map(b => [b.latitude, b.longitude]));
-                map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+                const bounds = new google.maps.LatLngBounds();
+                buses.forEach(b => {
+                    bounds.extend({ lat: b.latitude, lng: b.longitude });
+                });
+                map.fitBounds(bounds);
+
+                // Limitar el zoom máximo
+                google.maps.event.addListenerOnce(map, 'bounds_changed', function() {
+                    if (map.getZoom() > 15) {
+                        map.setZoom(15);
+                    }
+                });
             }
         }
 
@@ -182,7 +207,7 @@
         function selectBus(bus) {
             selectedBus = bus;
 
-            // Actualizar iconos
+            // Actualizar iconos de todos los marcadores
             Object.keys(markers).forEach(busId => {
                 const isSelected = busId == bus.bus_id;
                 markers[busId].setIcon(isSelected ? busIconSelected : busIcon);
@@ -281,11 +306,8 @@
         }
 
         // Event listener para filtro
-        document.getElementById('rutaFilter').addEventListener('change', loadActiveBuses);
-
-        // Iniciar mapa cuando el DOM esté listo
         document.addEventListener('DOMContentLoaded', function() {
-            initMap();
+            document.getElementById('rutaFilter').addEventListener('change', loadActiveBuses);
         });
     </script>
     @endpush
