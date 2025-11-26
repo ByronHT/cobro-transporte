@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import ComplaintsSection from './ComplaintsSection';
-import BusMap from './BusMap';
+import BusMapGoogle from './BusMapGoogle'; // Migrado a Google Maps
 import BusInfoModal from './BusInfoModal';
 import { API_BASE_URL, POLLING_INTERVAL } from '../config';
 
@@ -2216,8 +2216,8 @@ function PassengerDashboard() {
                             </div>
                         ) : userLocation && selectedRouteId ? (
                             <>
-                                {/* Mapa real con OpenStreetMap + Leaflet */}
-                                <BusMap
+                                {/* Mapa real con Google Maps */}
+                                <BusMapGoogle
                                     buses={nearbyBuses}
                                     userLocation={userLocation}
                                     center={userLocation}
