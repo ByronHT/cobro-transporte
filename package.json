@@ -39,6 +39,7 @@
         "@capacitor/local-notifications": "^7.0.3",
         "@googlemaps/js-api-loader": "^2.0.2",
         "@ionic/react": "^8.7.6",
+        "@react-google-maps/api": "^2.20.7",
         "ionicons": "^8.0.13",
         "jotai": "^2.15.0",
         "jquery": "^3.7.1",
