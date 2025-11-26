@@ -59,6 +59,8 @@
         let map;
         let markers = {};
         let selectedBus = null;
+        let busIcon;
+        let busIconSelected;
 
         // Centro de Santa Cruz, Bolivia
         const defaultCenter = { lat: -17.7833, lng: -63.1821 };
@@ -81,6 +83,27 @@
                     }
                 ]
             });
+
+            // Definir iconos DESPUÉS de que Google Maps esté cargado
+            busIcon = {
+                path: 'M12 2C7 2 3 6 3 11c0 5.25 9 13 9 13s9-7.75 9-13c0-5-4-9-9-9zm0 12.5c-1.93 0-3.5-1.57-3.5-3.5S10.07 7.5 12 7.5s3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z',
+                fillColor: '#3b82f6',
+                fillOpacity: 1,
+                strokeColor: '#ffffff',
+                strokeWeight: 2,
+                scale: 1.5,
+                anchor: new google.maps.Point(12, 24)
+            };
+
+            busIconSelected = {
+                path: 'M12 2C7 2 3 6 3 11c0 5.25 9 13 9 13s9-7.75 9-13c0-5-4-9-9-9zm0 12.5c-1.93 0-3.5-1.57-3.5-3.5S10.07 7.5 12 7.5s3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z',
+                fillColor: '#ef4444',
+                fillOpacity: 1,
+                strokeColor: '#ffffff',
+                strokeWeight: 3,
+                scale: 2,
+                anchor: new google.maps.Point(12, 24)
+            };
 
             // Cargar buses activos
             loadActiveBuses();
@@ -115,27 +138,6 @@
                     showErrorMessage();
                 });
         }
-
-        // Iconos personalizados para buses (SVG para Google Maps)
-        const busIcon = {
-            path: 'M12 2C7 2 3 6 3 11c0 5.25 9 13 9 13s9-7.75 9-13c0-5-4-9-9-9zm0 12.5c-1.93 0-3.5-1.57-3.5-3.5S10.07 7.5 12 7.5s3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z',
-            fillColor: '#3b82f6',
-            fillOpacity: 1,
-            strokeColor: '#ffffff',
-            strokeWeight: 2,
-            scale: 1.5,
-            anchor: new google.maps.Point(12, 24)
-        };
-
-        const busIconSelected = {
-            path: 'M12 2C7 2 3 6 3 11c0 5.25 9 13 9 13s9-7.75 9-13c0-5-4-9-9-9zm0 12.5c-1.93 0-3.5-1.57-3.5-3.5S10.07 7.5 12 7.5s3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z',
-            fillColor: '#ef4444',
-            fillOpacity: 1,
-            strokeColor: '#ffffff',
-            strokeWeight: 3,
-            scale: 2,
-            anchor: new google.maps.Point(12, 24)
-        };
 
         // Actualizar marcadores en el mapa
         function updateBusMarkers(buses) {

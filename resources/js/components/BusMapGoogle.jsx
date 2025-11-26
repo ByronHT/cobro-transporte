@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { GoogleMap, LoadScript, Marker, Circle, InfoWindow } from '@react-google-maps/api';
+import { GoogleMap, useLoadScript, Marker, Circle, InfoWindow } from '@react-google-maps/api';
 import { GOOGLE_MAPS_API_KEY } from '../config';
 
 const containerStyle = {
@@ -13,6 +13,16 @@ const defaultCenter = {
 };
 
 const libraries = ['places', 'geometry'];
+
+// Hook para cargar Google Maps (se ejecuta solo una vez)
+function useGoogleMaps() {
+    const { isLoaded, loadError } = useLoadScript({
+        googleMapsApiKey: GOOGLE_MAPS_API_KEY,
+        libraries: libraries,
+    });
+
+    return { isLoaded, loadError };
+}
 
 /**
  * Componente de Mapa de Buses con Google Maps usando @react-google-maps/api
@@ -42,7 +52,9 @@ function BusMapGoogle({
 }) {
     const [map, setMap] = useState(null);
     const [selectedMarker, setSelectedMarker] = useState(null);
-    const [loadError, setLoadError] = useState(null);
+
+    // Usar el hook para cargar Google Maps
+    const { isLoaded, loadError } = useGoogleMaps();
 
     // Centro del mapa
     const mapCenter = center || userLocation || defaultCenter;
@@ -86,12 +98,6 @@ function BusMapGoogle({
         ]
     };
 
-    // Manejar errores de carga
-    const handleLoadError = (error) => {
-        console.error('Error cargando Google Maps:', error);
-        setLoadError(error);
-    };
-
     // Si la API key no está configurada
     if (!GOOGLE_MAPS_API_KEY || GOOGLE_MAPS_API_KEY === '') {
         return (
@@ -110,6 +116,34 @@ function BusMapGoogle({
                     <p style={{ fontSize: '14px', marginTop: '10px' }}>
                         Configura VITE_GOOGLE_MAPS_API_KEY en el archivo .env
                     </p>
+                </div>
+            </div>
+        );
+    }
+
+    // Mostrar loading mientras carga Google Maps
+    if (!isLoaded) {
+        return (
+            <div style={{
+                height,
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                background: '#f3f4f6',
+                color: '#6b7280'
+            }}>
+                <div style={{ textAlign: 'center' }}>
+                    <div style={{
+                        width: '40px',
+                        height: '40px',
+                        border: '4px solid #e5e7eb',
+                        borderTop: '4px solid #0891b2',
+                        borderRadius: '50%',
+                        animation: 'spin 1s linear infinite',
+                        margin: '0 auto 10px'
+                    }} />
+                    <p>Cargando Google Maps...</p>
+                    <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
                 </div>
             </div>
         );
@@ -143,35 +177,6 @@ function BusMapGoogle({
 
     return (
         <div style={{ height, width: '100%', position: 'relative', borderRadius: '8px', overflow: 'hidden' }}>
-            <LoadScript
-                googleMapsApiKey={GOOGLE_MAPS_API_KEY}
-                libraries={libraries}
-                onError={handleLoadError}
-                loadingElement={
-                    <div style={{
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        height: '100%',
-                        background: '#f3f4f6',
-                        color: '#6b7280'
-                    }}>
-                        <div style={{ textAlign: 'center' }}>
-                            <div style={{
-                                width: '40px',
-                                height: '40px',
-                                border: '4px solid #e5e7eb',
-                                borderTop: '4px solid #0891b2',
-                                borderRadius: '50%',
-                                animation: 'spin 1s linear infinite',
-                                margin: '0 auto 10px'
-                            }} />
-                            <p>Cargando Google Maps...</p>
-                            <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
-                        </div>
-                    </div>
-                }
-            >
                 <GoogleMap
                     mapContainerStyle={containerStyle}
                     center={mapCenter}
@@ -284,7 +289,6 @@ function BusMapGoogle({
                         );
                     })}
                 </GoogleMap>
-            </LoadScript>
 
             {/* Leyenda flotante */}
             <div style={{
