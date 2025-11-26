@@ -73,11 +73,11 @@ class BusTrackingController extends Controller
         $request->validate([
             'latitude' => 'required|numeric|between:-90,90',
             'longitude' => 'required|numeric|between:-180,180',
-            'radius' => 'nullable|numeric|min:0.1|max:10', // Máximo 10km
+            'radius' => 'nullable|numeric|min:0.1|max:50', // Máximo 50km
             'ruta_id' => 'nullable|integer|exists:rutas,id' // Filtrar por línea específica
         ]);
 
-        $radiusKm = $request->get('radius', 2); // Default 2km
+        $radiusKm = $request->get('radius', 20); // Default 20km (aumentado de 2km)
         $rutaId = $request->get('ruta_id');
 
         try {

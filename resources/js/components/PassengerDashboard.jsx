@@ -360,16 +360,6 @@ function PassengerDashboard() {
         navigate('/login');
     };
 
-    const loadTransactions = async () => {
-        try {
-            const response = await apiClient.get('/api/transactions');
-            setTransactions(response.data.data || []);
-        } catch (err) {
-            console.error('Error loading transactions:', err);
-            setError('No se pudieron cargar las transacciones.');
-        }
-    };
-
     // Cargar todos los viajes (sin límite)
     const loadAllTrips = async () => {
         setLoadingAllTrips(true);

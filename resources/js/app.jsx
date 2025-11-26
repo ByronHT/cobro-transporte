@@ -1,5 +1,5 @@
 import './bootstrap';
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import ReactDOM from 'react-dom/client';
 import {
     BrowserRouter as Router,
@@ -11,10 +11,40 @@ import {
 // Importar Capacitor
 import { Capacitor } from '@capacitor/core';
 
-import PassengerDashboard from './components/PassengerDashboard'; // Panel del Pasajero
-import DriverDashboard from './components/DriverDashboard'; // Panel del Chofer
-import LoginUnificado from './components/LoginUnificado'; // Login Unificado
+// Code Splitting: Lazy loading de componentes pesados
+const PassengerDashboard = lazy(() => import('./components/PassengerDashboard')); // Panel del Pasajero
+const DriverDashboard = lazy(() => import('./components/DriverDashboard')); // Panel del Chofer
+const LoginUnificado = lazy(() => import('./components/LoginUnificado')); // Login Unificado
+
+// Componente ligero que se carga inmediatamente
 import NoInternetModal from './components/NoInternetModal'; // Modal de Sin Conexion
+
+// Loading component para mostrar mientras carga
+const LoadingScreen = () => (
+    <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        color: 'white',
+        fontFamily: 'system-ui'
+    }}>
+        <div style={{ textAlign: 'center' }}>
+            <div style={{
+                width: '50px',
+                height: '50px',
+                border: '4px solid rgba(255,255,255,0.3)',
+                borderTop: '4px solid white',
+                borderRadius: '50%',
+                animation: 'spin 1s linear infinite',
+                margin: '0 auto 20px'
+            }} />
+            <p>Cargando...</p>
+            <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+        </div>
+    </div>
+);
 
 // Error Boundary para capturar errores
 class ErrorBoundary extends React.Component {
@@ -79,47 +109,49 @@ function App() {
         <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             {/* Modal de Sin Conexion - siempre visible */}
             <NoInternetModal />
-            <Routes>
-                {/* Login Unificado */}
-                <Route path="/login" element={<LoginUnificado />} />
+            <Suspense fallback={<LoadingScreen />}>
+                <Routes>
+                    {/* Login Unificado */}
+                    <Route path="/login" element={<LoginUnificado />} />
 
-                {/* Dashboard del Pasajero (protegido) */}
-                <Route
-                    path="/passenger/dashboard"
-                    element={
-                        <PassengerProtectedRoute>
-                            <PassengerDashboard />
-                        </PassengerProtectedRoute>
-                    }
-                />
-
-                {/* Dashboard del Chofer (protegido) */}
-                <Route
-                    path="/driver/dashboard"
-                    element={
-                        <DriverProtectedRoute>
-                            <DriverDashboard />
-                        </DriverProtectedRoute>
-                    }
-                />
-
-                {/* Ruta raíz - detecta si hay sesión activa */}
-                <Route
-                    path="/"
-                    element={(() => {
-                        const driverToken = localStorage.getItem('driver_token');
-                        const passengerToken = localStorage.getItem('passenger_token');
-
-                        if (driverToken) {
-                            return <Navigate to="/driver/dashboard" />;
-                        } else if (passengerToken) {
-                            return <Navigate to="/passenger/dashboard" />;
-                        } else {
-                            return <Navigate to="/login" />;
+                    {/* Dashboard del Pasajero (protegido) */}
+                    <Route
+                        path="/passenger/dashboard"
+                        element={
+                            <PassengerProtectedRoute>
+                                <PassengerDashboard />
+                            </PassengerProtectedRoute>
                         }
-                    })()}
-                />
-            </Routes>
+                    />
+
+                    {/* Dashboard del Chofer (protegido) */}
+                    <Route
+                        path="/driver/dashboard"
+                        element={
+                            <DriverProtectedRoute>
+                                <DriverDashboard />
+                            </DriverProtectedRoute>
+                        }
+                    />
+
+                    {/* Ruta raíz - detecta si hay sesión activa */}
+                    <Route
+                        path="/"
+                        element={(() => {
+                            const driverToken = localStorage.getItem('driver_token');
+                            const passengerToken = localStorage.getItem('passenger_token');
+
+                            if (driverToken) {
+                                return <Navigate to="/driver/dashboard" />;
+                            } else if (passengerToken) {
+                                return <Navigate to="/passenger/dashboard" />;
+                            } else {
+                                return <Navigate to="/login" />;
+                            }
+                        })()}
+                    />
+                </Routes>
+            </Suspense>
         </Router>
     );
 }

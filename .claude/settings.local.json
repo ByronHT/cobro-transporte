@@ -58,7 +58,10 @@
       "Bash(del /Q \"CODIGO_ARDUINO.txt\" \"CODIGO_ARDUINO_ACTUALIZADO.txt\" 2)",
       "Bash(del /Q \"index.html\" \"diagrama-clases.html\" \"diagrama-clases-uml.html\" \"diagrama-uml-completo.html\" \"diagrama-uml-final.html\" 2)",
       "Bash(del /Q \"casicasi.PNG\" \"resultadomal.PNG\" \"resultadomaomeno.PNG\" \"ejemplodiagrama.jpeg\" 2)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(cmd /c \"dir android\\app\\build\\outputs\\apk 2>nul\")",
+      "Bash(cmd /c \"del /Q error.jpg 2>nul && echo Archivo error.jpg eliminado\")",
+      "Bash(del error.jpg)"
     ],
     "deny": [],
     "ask": []
