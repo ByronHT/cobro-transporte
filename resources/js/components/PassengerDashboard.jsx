@@ -204,7 +204,7 @@ function PassengerDashboard() {
                 // Cargar transacciones (necesario para vista de devoluciones)
                 const transactionsResponse = await apiClient.get('/api/transactions');
                 if (isMounted) {
-                    setTransactions(transactionsResponse.data);
+                    setTransactions(transactionsResponse.data.data || []);
                 }
 
                 // Consultar eventos de pago nuevos
