@@ -121,6 +121,7 @@ function PassengerDashboard() {
     const [showFindLineView, setShowFindLineView] = useState(false);
     const [availableRoutes, setAvailableRoutes] = useState([]);
     const [selectedRouteId, setSelectedRouteId] = useState('');
+    const [selectedRouteData, setSelectedRouteData] = useState(null);
     const [nearbyBuses, setNearbyBuses] = useState([]);
     const [userLocation, setUserLocation] = useState(null);
     const [loadingLocation, setLoadingLocation] = useState(false);
@@ -384,22 +385,29 @@ function PassengerDashboard() {
     const loadNearbyBuses = async (routeId) => {
         if (!routeId) {
             setNearbyBuses([]);
+            setSelectedRouteData(null);
             return;
         }
 
         setLoadingBuses(true);
         try {
-            const response = await apiClient.get(`/api/passenger/nearby-buses`, {
-                params: {
-                    ruta_id: routeId,
-                    latitude: userLocation?.lat,
-                    longitude: userLocation?.lng
-                }
-            });
-            setNearbyBuses(response.data.buses || []);
+            const [busesResponse, routeResponse] = await Promise.all([
+                apiClient.get(`/api/passenger/nearby-buses`, {
+                    params: {
+                        ruta_id: routeId,
+                        latitude: userLocation?.lat,
+                        longitude: userLocation?.lng
+                    }
+                }),
+                apiClient.get(`/api/passenger/route-details/${routeId}`)
+            ]);
+
+            setNearbyBuses(busesResponse.data.buses || []);
+            setSelectedRouteData(routeResponse.data.route || null);
         } catch (err) {
             console.error('Error loading nearby buses:', err);
             setNearbyBuses([]);
+            setSelectedRouteData(null);
         } finally {
             setLoadingBuses(false);
         }
@@ -2126,6 +2134,7 @@ function PassengerDashboard() {
                                 setShowFindLineView(false);
                                 setSelectedRouteId('');
                                 setNearbyBuses([]);
+                                setSelectedRouteData(null);
                             }}
                             style={{
                                 background: 'rgba(255,255,255,0.2)',
@@ -2230,6 +2239,7 @@ function PassengerDashboard() {
                                     selectedBusId={selectedBus?.bus_id}
                                     height="100%"
                                     showUserCircle={true}
+                                    routeData={selectedRouteData}
                                 />
 
                                 {/* Mensaje flotante de estado */}

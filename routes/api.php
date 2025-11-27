@@ -81,6 +81,7 @@ Route::middleware('auth:sanctum')->group(function(){
     // Sistema de Tracking GPS - Rutas del Pasajero
     Route::get('/passenger/nearby-buses', [BusTrackingController::class, 'getNearbyBuses']);
     Route::get('/passenger/available-routes', [BusTrackingController::class, 'getAvailableRoutes']);
+    Route::get('/passenger/route-details/{id}', [BusTrackingController::class, 'getRouteDetails']);
     Route::get('/passenger/bus-location/{busId}', [BusTrackingController::class, 'getBusLocation']);
     Route::get('/passenger/active-buses', [TripController::class, 'getActiveBusesWithType']);
 

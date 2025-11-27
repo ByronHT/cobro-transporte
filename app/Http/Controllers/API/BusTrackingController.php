@@ -98,6 +98,10 @@ class BusTrackingController extends Controller
 
             // Formatear respuesta
             $buses = $nearbyBuses->map(function ($location) {
+                $activeTrip = \App\Models\Trip::where('bus_id', $location->bus_id)
+                    ->whereNull('end_time')
+                    ->first();
+
                 return [
                     'bus_id' => $location->bus_id,
                     'bus_plate' => $location->bus->plate ?? 'N/A',
@@ -114,7 +118,9 @@ class BusTrackingController extends Controller
                     'distance_meters' => round($location->distance_km * 1000),
                     'last_update' => $location->recorded_at->diffForHumans(),
                     'last_update_timestamp' => $location->recorded_at->toIso8601String(),
-                    'is_active' => $location->is_active
+                    'is_active' => $location->is_active,
+                    'tipo_viaje' => $activeTrip ? $activeTrip->tipo_viaje : 'ida',
+                    'trip_id' => $activeTrip ? $activeTrip->id : null
                 ];
             });
 
@@ -135,6 +141,38 @@ class BusTrackingController extends Controller
                 'message' => 'Error al buscar buses cercanos',
                 'error' => $e->getMessage()
             ], 500);
+        }
+    }
+
+    /**
+     * Obtener datos completos de una ruta incluyendo waypoints
+     * GET /api/passenger/route-details/{id}
+     */
+    public function getRouteDetails($id)
+    {
+        try {
+            $ruta = Ruta::findOrFail($id);
+
+            return response()->json([
+                'success' => true,
+                'route' => [
+                    'id' => $ruta->id,
+                    'nombre' => $ruta->nombre,
+                    'descripcion' => $ruta->descripcion,
+                    'ruta_ida_descripcion' => $ruta->ruta_ida_descripcion,
+                    'ruta_vuelta_descripcion' => $ruta->ruta_vuelta_descripcion,
+                    'ruta_ida_waypoints' => $ruta->ruta_ida_waypoints ?? [],
+                    'ruta_vuelta_waypoints' => $ruta->ruta_vuelta_waypoints ?? [],
+                    'tarifa_adulto' => $ruta->tarifa_adulto,
+                    'tarifa_descuento' => $ruta->tarifa_descuento
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Ruta no encontrada',
+                'error' => $e->getMessage()
+            ], 404);
         }
     }
 

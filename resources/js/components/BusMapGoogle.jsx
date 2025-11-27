@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { GoogleMap, useLoadScript, Marker, Circle, InfoWindow } from '@react-google-maps/api';
+import { GoogleMap, useLoadScript, Marker, Circle, InfoWindow, Polyline } from '@react-google-maps/api';
 import { GOOGLE_MAPS_API_KEY } from '../config';
 
 const containerStyle = {
@@ -37,6 +37,7 @@ function useGoogleMaps() {
  * @param {number} props.selectedBusId - ID del bus seleccionado
  * @param {string} props.height - Altura del mapa (default: '500px')
  * @param {boolean} props.showUserCircle - Mostrar círculo alrededor del usuario
+ * @param {Object} props.routeData - Datos de la ruta con waypoints ida/vuelta
  */
 function BusMapGoogle({
     buses = [],
@@ -47,7 +48,8 @@ function BusMapGoogle({
     onBusClick = null,
     selectedBusId = null,
     height = '500px',
-    showUserCircle = true
+    showUserCircle = true,
+    routeData = null
 }) {
     const [map, setMap] = useState(null);
     const [selectedMarker, setSelectedMarker] = useState(null);
@@ -200,8 +202,8 @@ function BusMapGoogle({
                                 title="Tu ubicación"
                                 icon={{
                                     url: '/images/map-icons/user-3d.svg',
-                                    scaledSize: new window.google.maps.Size(48, 48),
-                                    anchor: new window.google.maps.Point(24, 44),
+                                    scaledSize: new window.google.maps.Size(64, 64),
+                                    anchor: new window.google.maps.Point(32, 58),
                                 }}
                                 zIndex={2000}
                             />
@@ -261,11 +263,11 @@ function BusMapGoogle({
                                 title={bus.bus_plate || bus.plate}
                                 icon={{
                                     url: iconUrl,
-                                    scaledSize: new window.google.maps.Size(isSelected ? 80 : 64, isSelected ? 80 : 64),
-                                    anchor: new window.google.maps.Point(isSelected ? 40 : 32, isSelected ? 72 : 58),
+                                    scaledSize: new window.google.maps.Size(isSelected ? 96 : 72, isSelected ? 96 : 72),
+                                    anchor: new window.google.maps.Point(isSelected ? 48 : 36, isSelected ? 86 : 64),
                                     rotation: rotation
                                 }}
-                                zIndex={isSelected ? 1000 : 100}
+                                zIndex={isSelected ? 1500 : 500}
                                 onClick={() => {
                                     setSelectedMarker(bus);
                                     if (onBusClick) {
@@ -329,6 +331,39 @@ function BusMapGoogle({
                             </Marker>
                         );
                     })}
+
+                    {/* Polylines para rutas IDA y VUELTA */}
+                    {routeData && routeData.ruta_ida_waypoints && Array.isArray(routeData.ruta_ida_waypoints) && routeData.ruta_ida_waypoints.length > 0 && (
+                        <Polyline
+                            path={routeData.ruta_ida_waypoints.map(wp => ({
+                                lat: parseFloat(wp.lat || wp.latitude),
+                                lng: parseFloat(wp.lng || wp.longitude)
+                            }))}
+                            options={{
+                                strokeColor: '#2563eb',
+                                strokeOpacity: 0.8,
+                                strokeWeight: 5,
+                                geodesic: true,
+                                zIndex: 50
+                            }}
+                        />
+                    )}
+
+                    {routeData && routeData.ruta_vuelta_waypoints && Array.isArray(routeData.ruta_vuelta_waypoints) && routeData.ruta_vuelta_waypoints.length > 0 && (
+                        <Polyline
+                            path={routeData.ruta_vuelta_waypoints.map(wp => ({
+                                lat: parseFloat(wp.lat || wp.latitude),
+                                lng: parseFloat(wp.lng || wp.longitude)
+                            }))}
+                            options={{
+                                strokeColor: '#16a34a',
+                                strokeOpacity: 0.8,
+                                strokeWeight: 5,
+                                geodesic: true,
+                                zIndex: 50
+                            }}
+                        />
+                    )}
                 </GoogleMap>
 
             {/* Leyenda flotante */}
@@ -348,10 +383,26 @@ function BusMapGoogle({
                     <span>Buses activos ({buses.length})</span>
                 </div>
                 {userLocation && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '5px' }}>
                         <div style={{ width: '12px', height: '12px', background: '#10b981', borderRadius: '50%' }}></div>
                         <span>Tu ubicación</span>
                     </div>
+                )}
+                {routeData && (
+                    <>
+                        {routeData.ruta_ida_waypoints && routeData.ruta_ida_waypoints.length > 0 && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '5px' }}>
+                                <div style={{ width: '20px', height: '3px', background: '#2563eb', borderRadius: '2px' }}></div>
+                                <span>Ruta IDA</span>
+                            </div>
+                        )}
+                        {routeData.ruta_vuelta_waypoints && routeData.ruta_vuelta_waypoints.length > 0 && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '5px' }}>
+                                <div style={{ width: '20px', height: '3px', background: '#16a34a', borderRadius: '2px' }}></div>
+                                <span>Ruta VUELTA</span>
+                            </div>
+                        )}
+                    </>
                 )}
                 <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #e5e7eb', fontSize: '10px', color: '#9ca3af' }}>
                     Powered by Google Maps
