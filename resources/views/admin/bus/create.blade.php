@@ -59,22 +59,15 @@
                 </div>
 
                 <div class="mb-6 p-4 bg-blue-50 border-l-4 border-blue-500 rounded-lg">
-                    <label class="block text-sm font-bold text-gray-700 mb-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+                    <div class="flex items-start gap-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-600 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
                         </svg>
-                        Asignar Chofer
-                    </label>
-                    <select name="driver_id"
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                        <option value="">Sin asignar</option>
-                        @foreach($drivers as $driver)
-                            <option value="{{ $driver->id }}" {{ old('driver_id') == $driver->id ? 'selected' : '' }}>
-                                {{ $driver->name }} ({{ $driver->email }})
-                            </option>
-                        @endforeach
-                    </select>
-                    <p class="text-xs text-gray-600 mt-2">Selecciona un chofer para asignarlo a este bus</p>
+                        <div>
+                            <p class="text-sm font-bold text-blue-800">Asignación de Choferes</p>
+                            <p class="text-xs text-blue-700 mt-1">Los choferes seleccionarán el bus al iniciar su turno desde la aplicación móvil. Ya no es necesario asignar un chofer fijo a cada bus.</p>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="flex justify-between items-center mt-8">

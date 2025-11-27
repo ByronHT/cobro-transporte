@@ -7,6 +7,9 @@ use App\Models\Bus;
 use App\Models\Trip;
 use App\Models\Transaction;
 use App\Models\PaymentEvent;
+use App\Models\Turno;
+use App\Models\TripWaypoint;
+use Illuminate\Support\Facades\DB;
 
 class TripController extends Controller
 {
@@ -15,11 +18,8 @@ class TripController extends Controller
         $user = $request->user();
         $per = intval($request->get('per', 20));
 
-        // Obtener los IDs de las tarjetas del usuario
         $cardIds = $user->cards()->pluck('id')->toArray();
 
-        // Obtener TODAS las transacciones de tipo 'fare' (cada pago es una entrada)
-        // No agrupamos por viaje, cada transacción aparece individualmente
         $transactions = Transaction::with(['trip.ruta', 'trip.bus', 'trip.driver'])
             ->whereIn('card_id', $cardIds)
             ->where('type', 'fare')
@@ -27,17 +27,13 @@ class TripController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate($per);
 
-        // Transformar las transacciones para que tengan el formato esperado por el frontend
         $transactions->getCollection()->transform(function ($transaction) {
             $trip = $transaction->trip;
 
-            // Crear un objeto que simule un viaje pero con datos de la transacción
             return (object) [
                 'id' => $trip->id,
                 'transaction_id' => $transaction->id,
                 'fare' => $transaction->amount,
-                // IMPORTANTE: Usar created_at de la TRANSACCIÓN (momento del pago)
-                // NO usar trip->inicio (momento que empezó el viaje)
                 'inicio' => $transaction->created_at,
                 'fecha' => $transaction->created_at, // Alternativa por si el frontend usa 'fecha'
                 'fin' => $trip->fin,
@@ -70,13 +66,11 @@ class TripController extends Controller
             'driver_id' => 'required|integer|exists:users,id',
         ]);
 
-        // Verificar que el bus no tenga un viaje activo
         $activeTripForBus = Trip::where('bus_id', $request->bus_id)->whereNull('fin')->first();
         if ($activeTripForBus) {
             return response()->json(['message' => 'Este bus ya tiene un viaje activo.'], 409);
         }
 
-        // Verificar que el chofer no tenga un viaje activo
         $activeTripForDriver = Trip::where('driver_id', $request->driver_id)->whereNull('fin')->first();
         if ($activeTripForDriver) {
             return response()->json(['message' => 'Este chofer ya tiene un viaje activo.'], 409);
@@ -110,8 +104,6 @@ class TripController extends Controller
 
         $trip->fin = now();
 
-        // Si el chofer proporciona un reporte personalizado, se usa
-        // Si no, se usa el valor por defecto de la columna
         if ($request->has('reporte') && !empty($request->reporte)) {
             $trip->reporte = $request->reporte;
         }
@@ -131,7 +123,6 @@ class TripController extends Controller
             'reporte' => 'nullable|string|max:2000', // Reporte opcional del chofer
         ]);
 
-        // Buscar el viaje activo del bus
         $trip = Trip::where('bus_id', $request->bus_id)->whereNull('fin')->first();
 
         if (!$trip) {
@@ -140,7 +131,6 @@ class TripController extends Controller
 
         $trip->fin = now();
 
-        // Si el chofer proporciona un reporte personalizado, se usa
         if ($request->has('reporte') && !empty($request->reporte)) {
             $trip->reporte = $request->reporte;
         }
@@ -168,10 +158,6 @@ class TripController extends Controller
             return response()->json(['message' => 'No hay viaje activo.'], 404);
         }
 
-        // Calcular el monto acumulado del viaje actual
-        // - fare: positivo (ingreso por pago de pasajero)
-        // - refund: negativo (descuenta cuando se devuelve dinero)
-        // - refund_reversal: positivo (recupera dinero cuando se revierte una devolución)
         $tripEarnings = Transaction::where('trip_id', $activeTrip->id)
                                    ->whereIn('type', ['fare', 'refund', 'refund_reversal'])
                                    ->sum('amount');
@@ -226,7 +212,6 @@ class TripController extends Controller
                                     ->orderBy('created_at', 'desc')
                                     ->get();
 
-        // Agregar el nombre del pasajero a cada transacción
         $transactions->transform(function ($transaction) {
             $transaction->passenger_name = $transaction->card && $transaction->card->user
                 ? $transaction->card->user->name
@@ -249,17 +234,14 @@ class TripController extends Controller
             return response()->json(['message' => 'No hay viaje activo.'], 404);
         }
 
-        // Obtener el último ID de evento que el frontend ya procesó
         $lastEventId = $request->query('last_event_id', 0);
 
-        // Consultar eventos nuevos desde el último ID
         $events = PaymentEvent::with(['passenger', 'card'])
             ->forTrip($activeTrip->id)
             ->where('id', '>', $lastEventId)
             ->recent()
             ->get();
 
-        // Agregar nombre del pasajero si existe
         $events->transform(function ($event) {
             $event->passenger_name = $event->passenger ? $event->passenger->name : 'Desconocido';
             return $event;
@@ -275,13 +257,10 @@ class TripController extends Controller
     {
         $user = $request->user();
 
-        // Obtener los IDs de las tarjetas del usuario
         $cardIds = $user->cards()->pluck('id')->toArray();
 
-        // Obtener el último ID de evento que el frontend ya procesó
         $lastEventId = $request->query('last_event_id', 0);
 
-        // Consultar eventos de las tarjetas del usuario
         $events = PaymentEvent::with(['trip.bus.ruta', 'trip.driver'])
             ->whereIn('card_id', $cardIds)
             ->where('id', '>', $lastEventId)
@@ -313,7 +292,6 @@ class TripController extends Controller
             ], 404);
         }
 
-        // Verificar que el usuario autenticado sea el chofer del viaje
         $driver = $request->user();
         if ($trip->driver_id !== $driver->id) {
             return response()->json([
@@ -322,9 +300,7 @@ class TripController extends Controller
             ], 403);
         }
 
-        // Manejar la subida de foto si existe
         if ($request->hasFile('photo')) {
-            // Si ya existe una foto previa, eliminarla
             if ($trip->photo_path && \Storage::disk('public')->exists($trip->photo_path)) {
                 \Storage::disk('public')->delete($trip->photo_path);
             }
@@ -333,16 +309,13 @@ class TripController extends Controller
             $trip->photo_path = $photoPath;
         }
 
-        // Agregar el nuevo reporte al existente con timestamp
         $timestamp = now()->format('d/m/Y H:i');
         $newReport = "\n[INCIDENTE REGISTRADO - {$timestamp}]\n";
         $newReport .= $request->reporte . "\n";
 
-        // Si el reporte es el valor por defecto, reemplazarlo
         if ($trip->reporte === 'Viaje concluido sin novedades') {
             $trip->reporte = "[INCIDENTE REGISTRADO - {$timestamp}]\n" . $request->reporte;
         } else {
-            // Agregar al reporte existente
             $trip->reporte .= $newReport;
         }
 
@@ -352,6 +325,209 @@ class TripController extends Controller
             'success' => true,
             'message' => 'Reporte registrado exitosamente',
             'trip' => $trip
+        ]);
+    }
+
+    /**
+     * Iniciar viaje con soporte para turno, ida/vuelta y cambio de bus
+     */
+    public function startWithTurno(Request $request)
+    {
+        $request->validate([
+            'bus_id' => 'required|integer|exists:buses,id',
+            'tipo_viaje' => 'required|in:ida,vuelta',
+            'cambio_bus' => 'nullable|boolean',
+            'nuevo_bus_id' => 'required_if:cambio_bus,true|exists:buses,id'
+        ]);
+
+        $driver = $request->user();
+
+        $turno = Turno::where('driver_id', $driver->id)
+                      ->where('status', 'activo')
+                      ->first();
+
+        if (!$turno) {
+            return response()->json([
+                'error' => 'Debes iniciar un turno antes de comenzar un viaje'
+            ], 400);
+        }
+
+        $activeTripForDriver = Trip::where('driver_id', $driver->id)->whereNull('fin')->first();
+        if ($activeTripForDriver) {
+            return response()->json([
+                'error' => 'Ya tienes un viaje activo. Finalízalo antes de comenzar uno nuevo.'
+            ], 409);
+        }
+
+        $busId = $request->bus_id;
+
+        $activeTripForBus = Trip::where('bus_id', $busId)->whereNull('fin')->first();
+        if ($activeTripForBus) {
+            return response()->json([
+                'error' => 'Este bus ya tiene un viaje activo.'
+            ], 409);
+        }
+
+        $bus = Bus::find($busId);
+
+        $trip = Trip::create([
+            'fecha' => now()->toDate(),
+            'ruta_id' => $bus->ruta_id,
+            'bus_id' => $busId,
+            'driver_id' => $driver->id,
+            'turno_id' => $turno->id,
+            'tipo_viaje' => $request->tipo_viaje,
+            'inicio' => now(),
+            'hora_salida_real' => now(),
+            'cambio_bus' => $request->cambio_bus ?? false,
+            'nuevo_bus_id' => $request->nuevo_bus_id ?? null,
+            'status' => 'en_curso'
+        ]);
+
+        return response()->json([
+            'message' => 'Viaje iniciado exitosamente',
+            'trip' => $trip->load('bus', 'ruta', 'turno')
+        ], 201);
+    }
+
+    /**
+     * Finalizar viaje con soporte ida/vuelta
+     */
+    public function finishTrip(Request $request)
+    {
+        $request->validate([
+            'trip_id' => 'required|integer|exists:trips,id',
+            'reporte' => 'nullable|string|max:2000',
+            'finalizado_en_parada' => 'nullable|boolean',
+            'crear_viaje_vuelta' => 'nullable|boolean' // Para viajes de ida
+        ]);
+
+        $driver = $request->user();
+
+        $trip = Trip::where('id', $request->trip_id)
+                    ->where('driver_id', $driver->id)
+                    ->whereNull('fin')
+                    ->first();
+
+        if (!$trip) {
+            return response()->json([
+                'error' => 'No se encontró un viaje activo con este ID.'
+            ], 404);
+        }
+
+        $waypoints = TripWaypoint::where('trip_id', $trip->id)
+                                  ->orderBy('recorded_at')
+                                  ->get()
+                                  ->map(function($wp) {
+                                      return [
+                                          'lat' => (float)$wp->latitude,
+                                          'lng' => (float)$wp->longitude,
+                                          'time' => $wp->recorded_at->toIso8601String(),
+                                          'speed' => $wp->speed ? (float)$wp->speed : null
+                                      ];
+                                  })
+                                  ->toArray();
+
+        $totalRecaudado = Transaction::where('trip_id', $trip->id)
+                                     ->where('type', 'fare')
+                                     ->sum('amount');
+
+        $trip->fin = now();
+        $trip->hora_llegada_real = now();
+        $trip->total_recaudado = $totalRecaudado;
+        $trip->recorrido_gps = $waypoints;
+        $trip->finalizado_en_parada = $request->finalizado_en_parada ?? true;
+        $trip->status = 'finalizado';
+
+        if ($request->has('reporte') && !empty($request->reporte)) {
+            $trip->reporte = $request->reporte;
+        }
+
+        $trip->save();
+
+        TripWaypoint::where('trip_id', $trip->id)->delete();
+
+        $viajeVuelta = null;
+        if ($trip->tipo_viaje === 'ida' && $request->crear_viaje_vuelta) {
+            $busParaVuelta = $trip->cambio_bus ? $trip->nuevo_bus_id : $trip->bus_id;
+
+            $viajeVuelta = Trip::create([
+                'fecha' => now()->toDate(),
+                'ruta_id' => $trip->ruta_id,
+                'bus_id' => $busParaVuelta,
+                'driver_id' => $driver->id,
+                'turno_id' => $trip->turno_id,
+                'tipo_viaje' => 'vuelta',
+                'inicio' => now(),
+                'hora_salida_real' => now(),
+                'status' => 'en_curso'
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'Viaje finalizado exitosamente',
+            'trip' => $trip->load('bus', 'ruta'),
+            'viaje_vuelta' => $viajeVuelta ? $viajeVuelta->load('bus', 'ruta') : null
+        ]);
+    }
+
+    /**
+     * Guardar waypoint GPS del viaje actual
+     */
+    public function saveWaypoint(Request $request)
+    {
+        $request->validate([
+            'trip_id' => 'required|integer|exists:trips,id',
+            'latitude' => 'required|numeric|between:-90,90',
+            'longitude' => 'required|numeric|between:-180,180',
+            'speed' => 'nullable|numeric|min:0'
+        ]);
+
+        $driver = $request->user();
+
+        $trip = Trip::where('id', $request->trip_id)
+                    ->where('driver_id', $driver->id)
+                    ->whereNull('fin')
+                    ->first();
+
+        if (!$trip) {
+            return response()->json([
+                'error' => 'Viaje no encontrado o no activo'
+            ], 404);
+        }
+
+        $waypoint = TripWaypoint::create([
+            'trip_id' => $request->trip_id,
+            'latitude' => $request->latitude,
+            'longitude' => $request->longitude,
+            'speed' => $request->speed,
+            'recorded_at' => now()
+        ]);
+
+        return response()->json([
+            'message' => 'Ubicación guardada',
+            'waypoint' => $waypoint
+        ]);
+    }
+
+    /**
+     * Obtener buses activos con filtro de tipo de viaje
+     */
+    public function getActiveBusesWithType(Request $request)
+    {
+        $tipoViaje = $request->query('tipo_viaje'); // 'ida' o 'vuelta'
+
+        $query = Trip::with(['bus', 'ruta', 'driver'])
+                     ->whereNull('fin');
+
+        if ($tipoViaje) {
+            $query->where('tipo_viaje', $tipoViaje);
+        }
+
+        $activeTrips = $query->get();
+
+        return response()->json([
+            'trips' => $activeTrips
         ]);
     }
 }

@@ -14,7 +14,6 @@ const defaultCenter = {
 
 const libraries = ['places', 'geometry'];
 
-// Hook para cargar Google Maps (se ejecuta solo una vez)
 function useGoogleMaps() {
     const { isLoaded, loadError } = useLoadScript({
         googleMapsApiKey: GOOGLE_MAPS_API_KEY,
@@ -55,13 +54,10 @@ function BusMapGoogle({
     const [busMarkers, setBusMarkers] = useState({});
     const prevBusesRef = useRef({});
 
-    // Usar el hook para cargar Google Maps
     const { isLoaded, loadError } = useGoogleMaps();
 
-    // Centro del mapa
     const mapCenter = center || userLocation || defaultCenter;
 
-    // Función para calcular el ángulo entre dos puntos
     const calculateBearing = (lat1, lng1, lat2, lng2) => {
         const dLng = (lng2 - lng1) * Math.PI / 180;
         const lat1Rad = lat1 * Math.PI / 180;
@@ -78,7 +74,6 @@ function BusMapGoogle({
     const onLoad = useCallback((map) => {
         setMap(map);
 
-        // Ajustar bounds si hay buses
         if (buses.length > 0 || userLocation) {
             const bounds = new window.google.maps.LatLngBounds();
 
@@ -98,7 +93,6 @@ function BusMapGoogle({
         setMap(null);
     }, []);
 
-    // Opciones del mapa
     const mapOptions = {
         disableDefaultUI: false,
         zoomControl: true,
@@ -114,7 +108,6 @@ function BusMapGoogle({
         ]
     };
 
-    // Si la API key no está configurada
     if (!GOOGLE_MAPS_API_KEY || GOOGLE_MAPS_API_KEY === '') {
         return (
             <div style={{
@@ -137,7 +130,6 @@ function BusMapGoogle({
         );
     }
 
-    // Mostrar loading mientras carga Google Maps
     if (!isLoaded) {
         return (
             <div style={{
@@ -165,7 +157,6 @@ function BusMapGoogle({
         );
     }
 
-    // Si hubo error al cargar
     if (loadError) {
         return (
             <div style={{
@@ -237,7 +228,6 @@ function BusMapGoogle({
                         const busId = bus.bus_id || bus.id;
                         const isSelected = selectedBusId === busId;
 
-                        // Calcular rotación basada en posición anterior
                         let rotation = 0;
                         if (prevBusesRef.current[busId]) {
                             const prev = prevBusesRef.current[busId];
@@ -249,11 +239,20 @@ function BusMapGoogle({
                             );
                         }
 
-                        // Guardar posición actual para la próxima actualización
                         prevBusesRef.current[busId] = {
                             latitude: bus.latitude,
                             longitude: bus.longitude
                         };
+
+                        const tipoViaje = bus.tipo_viaje || 'ida'; // Default a 'ida' si no existe
+                        let iconUrl;
+                        if (isSelected) {
+                            iconUrl = '/images/map-icons/bus-3d-selected.svg';
+                        } else {
+                            iconUrl = tipoViaje === 'vuelta'
+                                ? '/images/map-icons/bus-3d-vuelta.svg'
+                                : '/images/map-icons/bus-3d-ida.svg';
+                        }
 
                         return (
                             <Marker
@@ -261,7 +260,7 @@ function BusMapGoogle({
                                 position={{ lat: bus.latitude, lng: bus.longitude }}
                                 title={bus.bus_plate || bus.plate}
                                 icon={{
-                                    url: isSelected ? '/images/map-icons/bus-3d-selected.svg' : '/images/map-icons/bus-3d.svg',
+                                    url: iconUrl,
                                     scaledSize: new window.google.maps.Size(isSelected ? 80 : 64, isSelected ? 80 : 64),
                                     anchor: new window.google.maps.Point(isSelected ? 40 : 32, isSelected ? 72 : 58),
                                     rotation: rotation
@@ -286,6 +285,19 @@ function BusMapGoogle({
                                             <br />
                                             <span style={{ fontSize: '12px', color: '#64748b' }}>
                                                 {bus.ruta_nombre || bus.route_name || 'Sin ruta'}
+                                            </span>
+                                            <br />
+                                            <span style={{
+                                                fontSize: '11px',
+                                                fontWeight: '600',
+                                                color: tipoViaje === 'vuelta' ? '#16a34a' : '#2563eb',
+                                                background: tipoViaje === 'vuelta' ? '#d1fae5' : '#dbeafe',
+                                                padding: '2px 8px',
+                                                borderRadius: '4px',
+                                                display: 'inline-block',
+                                                marginTop: '4px'
+                                            }}>
+                                                {tipoViaje === 'vuelta' ? '🟢 VUELTA' : '🔵 IDA'}
                                             </span>
                                             {bus.driver_name && (
                                                 <>

@@ -20,24 +20,15 @@ apiClient.interceptors.request.use(config => {
     return Promise.reject(error);
 });
 
-// Helper function para formatear fechas de Bolivia correctamente
 const formatBoliviaDate = (dateString, options = {}) => {
     if (!dateString) return 'Fecha no disponible';
 
     try {
-        // Laravel guarda en hora de Bolivia (America/La_Paz, UTC-4)
-        // Pero al serializar a JSON agrega 'Z' (UTC), causando conversión incorrecta
 
-        // CASO ESPECIAL: Si termina en 'Z', es UTC
-        // Laravel guarda en hora local de Bolivia, pero al serializar a JSON
-        // convierte a UTC agregando 4 horas
-        // Ejemplo: Pago a las 19:51 Bolivia → se guarda como 23:51 UTC → enviado como "23:51:00Z"
-        // Usamos timeZone: 'America/La_Paz' para convertir correctamente
         if (dateString.endsWith('Z')) {
             const date = new Date(dateString);
             if (isNaN(date.getTime())) throw new Error('Invalid date');
 
-            // toLocaleString con timeZone convierte automáticamente de UTC a Bolivia
             return date.toLocaleString('es-BO', {
                 year: 'numeric',
                 month: 'long',
@@ -49,7 +40,6 @@ const formatBoliviaDate = (dateString, options = {}) => {
             });
         }
 
-        // Si tiene timezone explícito (como +/-04:00), usarlo directamente
         if (dateString.includes('+') || dateString.includes('-04:00')) {
             const date = new Date(dateString);
             if (isNaN(date.getTime())) throw new Error('Invalid date');
@@ -63,11 +53,8 @@ const formatBoliviaDate = (dateString, options = {}) => {
             });
         }
 
-        // Si no tiene timezone, Laravel envía en formato "YYYY-MM-DD HH:MM:SS"
-        // que ya está en hora de Bolivia, lo convertimos a ISO y lo tratamos como local
         const dateStr = dateString.includes('T') ? dateString : dateString.replace(' ', 'T');
 
-        // Crear date object interpretando como hora local (Bolivia)
         const parts = dateStr.match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
         if (!parts) throw new Error('Invalid date format');
 
@@ -101,7 +88,6 @@ function PassengerDashboard() {
     const [transactions, setTransactions] = useState([]);
     const [notification, setNotification] = useState(null);
     const [previousBalance, setPreviousBalance] = useState(null);
-    // Generar sessionId único para esta sesión (evita notificaciones duplicadas al recargar)
     const sessionIdRef = useRef((() => {
         const existing = sessionStorage.getItem('passenger_session_id');
         if (existing) return existing;
@@ -111,19 +97,15 @@ function PassengerDashboard() {
     })());
 
     const [lastEventId, setLastEventId] = useState(() => {
-        // Cargar el último ID de evento desde sessionStorage (no localStorage)
         const saved = sessionStorage.getItem(`passenger_last_event_${sessionIdRef.current}`);
         return saved ? parseInt(saved) : 0;
     });
 
-    // isInitialLoad ahora solo es true la primera vez en esta sesión
     const isInitialLoadRef = useRef(true);
     const qrCodeRef = useRef(null);
 
-    // Set para trackear eventos ya notificados (evita duplicados)
     const notifiedEventsRef = useRef(new Set());
 
-    // Estados para sistema de devoluciones
     const [refundRequests, setRefundRequests] = useState([]);
     const [showRefundSection, setShowRefundSection] = useState(false);
     const [selectedTrip, setSelectedTrip] = useState(null);
@@ -131,14 +113,11 @@ function PassengerDashboard() {
     const [refundReason, setRefundReason] = useState('');
     const [refundActionLoading, setRefundActionLoading] = useState(false);
 
-    // Estados para historial completo de viajes
     const [allTrips, setAllTrips] = useState([]);
     const [loadingAllTrips, setLoadingAllTrips] = useState(false);
 
-    // Estado para navegación inferior (Bottom Nav) - controla qué pantalla mostrar
     const [activeTab, setActiveTab] = useState('inicio'); // inicio, movimientos, devoluciones, quejas, mas
 
-    // Estados para "Buscar Línea"
     const [showFindLineView, setShowFindLineView] = useState(false);
     const [availableRoutes, setAvailableRoutes] = useState([]);
     const [selectedRouteId, setSelectedRouteId] = useState('');
@@ -148,6 +127,8 @@ function PassengerDashboard() {
     const [loadingBuses, setLoadingBuses] = useState(false);
     const [selectedBus, setSelectedBus] = useState(null);
     const [showBusModal, setShowBusModal] = useState(false);
+
+    const [tipoViajeFilter, setTipoViajeFilter] = useState('todos'); // 'todos', 'ida', 'vuelta'
 
     useEffect(() => {
         let intervalId;
@@ -160,7 +141,6 @@ function PassengerDashboard() {
                 return;
             }
 
-            // Solo mostrar loading en la primera carga absoluta
             const isFirstLoad = !user;
             if (isFirstLoad) {
                 setLoading(true);
@@ -172,18 +152,15 @@ function PassengerDashboard() {
                     const newUser = profileResponse.data;
                     const newBalance = parseFloat(newUser.balance);
 
-                    // Detectar cambios en el saldo y mostrar notificación
                     if (previousBalance !== null && previousBalance !== newBalance) {
                         const difference = newBalance - previousBalance;
                         if (difference < 0) {
-                            // Saldo disminuyó - pago realizado
                             showNotification({
                                 type: 'info',
                                 title: 'Pago realizado',
                                 message: `Se descontó ${Math.abs(difference).toFixed(2)} Bs de tu saldo`
                             });
                         } else if (difference > 0) {
-                            // Saldo aumentó - recarga realizada
                             showNotification({
                                 type: 'success',
                                 title: 'Recarga exitosa',
@@ -196,18 +173,19 @@ function PassengerDashboard() {
                     setPreviousBalance(newBalance);
                 }
 
-                const tripsResponse = await apiClient.get('/api/trips');
+                const tripsUrl = tipoViajeFilter === 'todos'
+                    ? '/api/trips'
+                    : `/api/trips?tipo_viaje=${tipoViajeFilter}`;
+                const tripsResponse = await apiClient.get(tripsUrl);
                 if (isMounted) {
                     setTrips(tripsResponse.data.data);
                 }
 
-                // Cargar transacciones (necesario para vista de devoluciones)
                 const transactionsResponse = await apiClient.get('/api/transactions');
                 if (isMounted) {
                     setTransactions(transactionsResponse.data.data || []);
                 }
 
-                // Consultar eventos de pago nuevos
                 const eventsResponse = await apiClient.get(`/api/passenger/payment-events?last_event_id=${lastEventId}`);
                 const newEvents = eventsResponse.data;
 
@@ -215,21 +193,17 @@ function PassengerDashboard() {
                 console.log('🔔 [PASSENGER] isInitialLoad:', isInitialLoadRef.current);
                 console.log('🔔 [PASSENGER] lastEventId:', lastEventId);
 
-                // Marcar que ya no es la carga inicial INMEDIATAMENTE
                 const wasInitialLoad = isInitialLoadRef.current;
                 if (isInitialLoadRef.current && isMounted) {
                     isInitialLoadRef.current = false;
                     console.log('🔔 [PASSENGER] Marcando isInitialLoad como false');
                 }
 
-                // Procesar cada evento nuevo y mostrar notificación
                 if (newEvents.length > 0 && isMounted) {
                     console.log('🔔 [PASSENGER] Procesando eventos. wasInitialLoad:', wasInitialLoad);
-                    // Solo mostrar notificaciones si NO era la carga inicial
                     if (!wasInitialLoad) {
                         console.log('🔔 [PASSENGER] Mostrando notificaciones para', newEvents.length, 'eventos');
                         newEvents.forEach(event => {
-                            // Verificar si ya se notificó este evento (evita duplicados)
                             if (notifiedEventsRef.current.has(event.id)) {
                                 console.log('🔔 [PASSENGER] Evento ya notificado, omitiendo:', event.id);
                                 return; // Skip este evento
@@ -237,7 +211,6 @@ function PassengerDashboard() {
 
                             console.log('🔔 [PASSENGER] Evento:', event.event_type, event.message);
 
-                            // Marcar como notificado ANTES de mostrar
                             notifiedEventsRef.current.add(event.id);
 
                             if (event.event_type === 'success') {
@@ -279,7 +252,6 @@ function PassengerDashboard() {
                                     title: '✅ Solicitud aprobada',
                                     message: event.message || `Tu solicitud de devolución fue aprobada. Se devolvieron ${parseFloat(event.amount).toFixed(2)} Bs a tu tarjeta.`
                                 });
-                                // Recargar solicitudes para actualizar el estado
                                 loadRefundRequests();
                             } else if (event.event_type === 'refund_rejected') {
                                 showNotification({
@@ -287,7 +259,6 @@ function PassengerDashboard() {
                                     title: '❌ Solicitud rechazada',
                                     message: event.message || 'Tu solicitud de devolución fue rechazada por el chofer.'
                                 });
-                                // Recargar solicitudes para actualizar el estado
                                 loadRefundRequests();
                             } else if (event.event_type === 'refund_reversed') {
                                 showNotification({
@@ -295,14 +266,12 @@ function PassengerDashboard() {
                                     title: '🔁 Devolución revertida',
                                     message: event.message || `Una devolución de ${parseFloat(event.amount).toFixed(2)} Bs ha sido revertida.`
                                 });
-                                // Recargar solicitudes y transacciones para actualizar
                                 loadRefundRequests();
                                 loadRecentTrips();
                             }
                         });
                     }
 
-                    // Actualizar el último ID procesado y guardarlo en sessionStorage (para esta sesión)
                     const maxId = Math.max(...newEvents.map(e => e.id));
                     setLastEventId(maxId);
                     sessionStorage.setItem(`passenger_last_event_${sessionIdRef.current}`, maxId.toString());
@@ -310,17 +279,14 @@ function PassengerDashboard() {
 
             } catch (err) {
                 console.error('Error en Dashboard:', err.response?.data || err.message);
-                // Solo mostrar error en la primera carga
                 if (isFirstLoad && isMounted) {
                     setError(`No se pudieron cargar los datos: ${err.response?.data?.message || err.message}`);
                 }
                 if (err.response && err.response.status === 401) {
-                    // Verificar si es un error persistente o temporal
                     const errorMessage = err.response.data?.message || '';
 
                     if (errorMessage.toLowerCase().includes('unauthenticated') ||
                         errorMessage.toLowerCase().includes('token')) {
-                        // Token realmente inválido → cerrar sesión
                         console.error('Token inválido. Cerrando sesión...');
                         localStorage.removeItem('passenger_token');
                         localStorage.removeItem('passenger_role');
@@ -328,12 +294,10 @@ function PassengerDashboard() {
                         sessionStorage.clear();
                         navigate('/login');
                     } else {
-                        // Error temporal → solo logear, no cerrar sesión
                         console.warn('Error 401 temporal. Reintentando en siguiente ciclo...');
                     }
                 }
             } finally {
-                // Solo ocultar loading si fue una carga inicial
                 if (isFirstLoad && isMounted) {
                     setLoading(false);
                 }
@@ -343,14 +307,13 @@ function PassengerDashboard() {
         fetchData(); // Primera carga (incluye transactions)
         intervalId = setInterval(fetchData, POLLING_INTERVAL); // Actualizar cada 5 segundos
 
-        // Cargar solicitudes de devolución (no están en fetchData)
         loadRefundRequests();
 
         return () => {
             isMounted = false;
             clearInterval(intervalId);
         };
-    }, [navigate]); // Agregada dependencia navigate
+    }, [navigate, tipoViajeFilter]); // Agregada dependencia navigate y tipoViajeFilter
 
     const handleLogout = () => {
         localStorage.removeItem('passenger_token');
@@ -360,7 +323,6 @@ function PassengerDashboard() {
         navigate('/login');
     };
 
-    // Cargar todos los viajes (sin límite)
     const loadAllTrips = async () => {
         setLoadingAllTrips(true);
         try {
@@ -374,7 +336,6 @@ function PassengerDashboard() {
         }
     };
 
-    // Funciones para "Buscar Línea"
     const loadAvailableRoutes = async () => {
         try {
             const response = await apiClient.get('/api/passenger/available-routes');
@@ -439,14 +400,12 @@ function PassengerDashboard() {
         }
     };
 
-    // Cargar solicitudes de devolución
     const loadRefundRequests = async () => {
         try {
             const response = await apiClient.get('/api/passenger/refund-requests');
             if (response.data.success) {
                 const newRequests = response.data.refund_requests;
 
-                // Detectar nuevas solicitudes pendientes y mostrar notificación
                 if (refundRequests.length > 0) {
                     const newPendingRequests = newRequests.filter(req =>
                         req.needs_verification &&
@@ -469,7 +428,6 @@ function PassengerDashboard() {
         }
     };
 
-    // Solicitar devolución
     const handleRequestRefund = async () => {
         if (!selectedTrip || !refundReason.trim()) {
             showNotification({
@@ -482,7 +440,6 @@ function PassengerDashboard() {
 
         setRefundActionLoading(true);
         try {
-            // selectedTrip es una transacción, su ID es el transaction_id
             const response = await apiClient.post('/api/passenger/request-refund', {
                 transaction_id: selectedTrip.id,  // Usar el ID de la transacción directamente
                 reason: refundReason
@@ -510,7 +467,6 @@ function PassengerDashboard() {
                 message: errorStatus === 409 ? 'Tu solicitud de devolución ya fue enviada al chofer' : errorMessage
             });
 
-            // Si ya existe una solicitud, cerrar el modal y recargar solicitudes
             if (errorStatus === 409) {
                 setShowRequestRefundModal(false);
                 setSelectedTrip(null);
@@ -522,7 +478,6 @@ function PassengerDashboard() {
         }
     };
 
-    // Cargar solicitudes de devolución periódicamente
     useEffect(() => {
         if (user) {
             loadRefundRequests();
@@ -531,7 +486,6 @@ function PassengerDashboard() {
         }
     }, [user]);
 
-    // Verificar si un viaje tiene una solicitud de devolución activa (pendiente o verificada)
     const hasActiveRefundRequest = (transactionId) => {
         return refundRequests.some(req =>
             req.transaction_id === transactionId &&
@@ -539,7 +493,6 @@ function PassengerDashboard() {
         );
     };
 
-    // Obtener solicitud de devolución de un viaje
     const getRefundRequestForTrip = (transactionId) => {
         return refundRequests.find(req =>
             req.transaction_id === transactionId &&
@@ -550,7 +503,6 @@ function PassengerDashboard() {
     const showNotification = (notif) => {
         console.log('🔔 [PASSENGER] showNotification llamado:', notif);
         setNotification(notif);
-        // Auto-ocultar después de 5 segundos
         setTimeout(() => {
             setNotification(null);
         }, 5000);
@@ -578,7 +530,6 @@ function PassengerDashboard() {
         img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
     };
 
-    // Solo mostrar pantalla de carga en la primera vez (cuando no hay usuario)
     if (loading && !user) {
         return (
             <div style={{
@@ -659,7 +610,6 @@ function PassengerDashboard() {
         );
     }
 
-    // Función para renderizar la pantalla de Movimientos (Historial de transacciones)
     const renderMovimientosScreen = () => {
         return (
             <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
@@ -774,11 +724,6 @@ function PassengerDashboard() {
                                                     const amount = parseFloat(tx.amount || 0);
                                                     const isFare = tx.type === 'fare';
 
-                                                    // Para pasajeros:
-                                                    // - fare: negativo (se descuenta)
-                                                    // - recharge: positivo (se agrega)
-                                                    // - refund: positivo (se devuelve)
-                                                    // - refund_reversal: negativo (se quita)
 
                                                     if (isFare || isReversal) {
                                                         return `-${Math.abs(amount).toFixed(2)} Bs`;
@@ -811,7 +756,6 @@ function PassengerDashboard() {
         );
     };
 
-    // Función para renderizar la pantalla de Viajes (Historial completo de viajes)
     const renderViajesScreen = () => {
         return (
             <div style={{ padding: '20px', maxWidth: '900px', margin: '0 auto' }}>
@@ -997,12 +941,9 @@ function PassengerDashboard() {
         );
     };
 
-    // Función para renderizar la pantalla de Devoluciones (Historial de solicitudes)
     const renderDevolucionesScreen = () => {
-        // Filtrar solo transacciones de tipo 'fare' (pagos de pasajes)
         const fareTransactions = transactions.filter(tx => tx.type === 'fare').slice(0, 8);
 
-        // Función helper para verificar si ya existe solicitud activa para una transacción
         const hasActiveRefundRequest = (transactionId) => {
             return refundRequests.some(req =>
                 req.transaction_id === transactionId &&
@@ -1254,7 +1195,6 @@ function PassengerDashboard() {
         );
     };
 
-    // Función para renderizar la pantalla de Quejas
     const renderQuejasScreen = () => {
         return (
             <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
@@ -1307,10 +1247,8 @@ function PassengerDashboard() {
                     <button
                         onClick={() => {
                             if (activeTab !== 'inicio') {
-                                // Si no estás en inicio, vuelve a inicio
                                 setActiveTab('inicio');
                             } else {
-                                // Si estás en inicio, cierra sesión
                                 handleLogout();
                             }
                         }}
@@ -1331,12 +1269,10 @@ function PassengerDashboard() {
                         onMouseLeave={(e) => e.target.style.background = 'rgba(255,255,255,0.2)'}
                     >
                         {activeTab !== 'inicio' ? (
-                            // Icono de flecha hacia atrás
                             <svg xmlns="http://www.w3.org/2000/svg" style={{ width: '20px', height: '20px' }} viewBox="0 0 20 20" fill="currentColor">
                                 <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
                             </svg>
                         ) : (
-                            // Icono de salir/logout
                             <svg xmlns="http://www.w3.org/2000/svg" style={{ width: '20px', height: '20px' }} viewBox="0 0 20 20" fill="currentColor">
                                 <path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clipRule="evenodd" />
                             </svg>
@@ -1657,6 +1593,65 @@ function PassengerDashboard() {
                         </svg>
                         Historial de Viajes
                     </h3>
+
+                    {/* Filtros de tipo de viaje */}
+                    <div style={{
+                        display: 'flex',
+                        gap: '8px',
+                        marginBottom: '20px'
+                    }}>
+                        <button
+                            onClick={() => setTipoViajeFilter('todos')}
+                            style={{
+                                flex: 1,
+                                padding: '10px 16px',
+                                background: tipoViajeFilter === 'todos' ? 'linear-gradient(135deg, #0891b2, #06b6d4)' : '#f1f5f9',
+                                color: tipoViajeFilter === 'todos' ? 'white' : '#64748b',
+                                border: 'none',
+                                borderRadius: '8px',
+                                fontSize: '14px',
+                                fontWeight: '600',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s'
+                            }}
+                        >
+                            Todos
+                        </button>
+                        <button
+                            onClick={() => setTipoViajeFilter('ida')}
+                            style={{
+                                flex: 1,
+                                padding: '10px 16px',
+                                background: tipoViajeFilter === 'ida' ? 'linear-gradient(135deg, #3b82f6, #2563eb)' : '#f1f5f9',
+                                color: tipoViajeFilter === 'ida' ? 'white' : '#64748b',
+                                border: 'none',
+                                borderRadius: '8px',
+                                fontSize: '14px',
+                                fontWeight: '600',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s'
+                            }}
+                        >
+                            🔵 Ida
+                        </button>
+                        <button
+                            onClick={() => setTipoViajeFilter('vuelta')}
+                            style={{
+                                flex: 1,
+                                padding: '10px 16px',
+                                background: tipoViajeFilter === 'vuelta' ? 'linear-gradient(135deg, #22c55e, #16a34a)' : '#f1f5f9',
+                                color: tipoViajeFilter === 'vuelta' ? 'white' : '#64748b',
+                                border: 'none',
+                                borderRadius: '8px',
+                                fontSize: '14px',
+                                fontWeight: '600',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s'
+                            }}
+                        >
+                            🟢 Vuelta
+                        </button>
+                    </div>
 
                     {trips.length > 0 ? (
                         <div style={{ maxHeight: '400px', overflowY: 'auto' }}>

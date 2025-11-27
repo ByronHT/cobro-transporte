@@ -22,11 +22,27 @@ class RutaController extends Controller
     {
         $request->validate([
             'nombre' => 'required|string|max:255',
-            'descripcion' => 'nullable|string|max:255',
-            'tarifa_base' => 'required|numeric|min:0'
+            'descripcion' => 'nullable|string',
+            'tarifa_base' => 'required|numeric|min:0',
+            'linea_numero' => 'nullable|string|max:50',
+            'ruta_ida_descripcion' => 'nullable|string',
+            'ruta_vuelta_descripcion' => 'nullable|string',
+            'tarifa_adulto' => 'required|numeric|min:0',
+            'tarifa_descuento' => 'required|numeric|min:0',
+            'activa' => 'boolean'
         ]);
 
-        Ruta::create($request->only(['nombre','descripcion','tarifa_base']));
+        Ruta::create($request->only([
+            'nombre',
+            'descripcion',
+            'tarifa_base',
+            'linea_numero',
+            'ruta_ida_descripcion',
+            'ruta_vuelta_descripcion',
+            'tarifa_adulto',
+            'tarifa_descuento',
+            'activa'
+        ]));
 
         return redirect()->route('admin.rutas.index')->with('success','Ruta creada.');
     }
@@ -41,12 +57,28 @@ class RutaController extends Controller
     {
         $request->validate([
             'nombre' => 'required|string|max:255',
-            'descripcion' => 'nullable|string|max:255',
-            'tarifa_base' => 'required|numeric|min:0'
+            'descripcion' => 'nullable|string',
+            'tarifa_base' => 'required|numeric|min:0',
+            'linea_numero' => 'nullable|string|max:50',
+            'ruta_ida_descripcion' => 'nullable|string',
+            'ruta_vuelta_descripcion' => 'nullable|string',
+            'tarifa_adulto' => 'required|numeric|min:0',
+            'tarifa_descuento' => 'required|numeric|min:0',
+            'activa' => 'boolean'
         ]);
 
         $ruta = Ruta::findOrFail($id);
-        $ruta->update($request->only(['nombre','descripcion','tarifa_base']));
+        $ruta->update($request->only([
+            'nombre',
+            'descripcion',
+            'tarifa_base',
+            'linea_numero',
+            'ruta_ida_descripcion',
+            'ruta_vuelta_descripcion',
+            'tarifa_adulto',
+            'tarifa_descuento',
+            'activa'
+        ]));
 
         return redirect()->route('admin.rutas.index')->with('success','Ruta actualizada correctamente.');
     }

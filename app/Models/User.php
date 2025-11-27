@@ -19,7 +19,6 @@ class User extends Authenticatable
      * Ver docs/ARQUITECTURA_BALANCE.md para más detalles
      */
 
-    // Campos que se pueden llenar masivamente
     protected $fillable = [
         'name',
         'email',
@@ -27,48 +26,78 @@ class User extends Authenticatable
         'password',
         'role',
         'active',
-        'balance'  // Solo usado para drivers (ganancias)
+        'balance',  // Solo usado para drivers (ganancias)
+        'login_code',
+        'ci',
+        'birth_date',
+        'user_type',
+        'school_name',
+        'university_name',
+        'university_year',
+        'university_end_year',
+        'total_earnings'
     ];
 
-    // Campos ocultos al serializar
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    // Tipos de campos
     protected $casts = [
         'email_verified_at' => 'datetime',
         'active' => 'boolean',
+        'birth_date' => 'date',
+        'balance' => 'decimal:2',
+        'total_earnings' => 'decimal:2',
     ];
 
-    // Relación con tarjetas
     public function cards()
     {
         return $this->hasMany(Card::class, 'passenger_id');
     }
 
-    // Relación con viajes como chofer
     public function trips()
     {
         return $this->hasMany(Trip::class, 'driver_id');
     }
 
-    // Relación con solicitudes de devolución como chofer
+    public function turnos()
+    {
+        return $this->hasMany(Turno::class, 'driver_id');
+    }
+
     public function refundRequestsAsDriver()
     {
         return $this->hasMany(RefundRequest::class, 'driver_id');
     }
 
-    // Relación con solicitudes de devolución como pasajero
     public function refundRequestsAsPassenger()
     {
         return $this->hasMany(RefundRequest::class, 'passenger_id');
     }
 
-    // Relación con verificaciones de devolución
     public function refundVerifications()
     {
         return $this->hasMany(RefundVerification::class);
+    }
+
+    public function calculateFare($tarifaBase, $tarifaAdulto, $tarifaDescuento)
+    {
+        switch ($this->user_type) {
+            case 'adult':
+                return $tarifaAdulto;
+            case 'senior':
+            case 'minor':
+            case 'student_school':
+            case 'student_university':
+                return $tarifaDescuento;
+            default:
+                return $tarifaBase;
+        }
+    }
+
+    public function hasDiscount()
+    {
+        return in_array($this->user_type, ['senior', 'minor', 'student_school', 'student_university']);
     }
 }

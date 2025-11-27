@@ -7,15 +7,42 @@ class Trip extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['fecha','ruta_id','bus_id','driver_id','inicio','fin','reporte','photo_path','status'];
+    protected $fillable = [
+        'fecha',
+        'ruta_id',
+        'bus_id',
+        'driver_id',
+        'turno_id',
+        'tipo_viaje',
+        'inicio',
+        'fin',
+        'hora_salida_programada',
+        'hora_salida_real',
+        'hora_llegada_programada',
+        'hora_llegada_real',
+        'reporte',
+        'photo_path',
+        'status',
+        'finalizado_en_parada',
+        'cambio_bus',
+        'nuevo_bus_id',
+        'recorrido_gps',
+        'total_recaudado'
+    ];
 
-    // Removido 'locations' de appends - causar error 500 al serializar
-    // Si necesitas locations, cárgalas explícitamente con ->with('locations')
 
     protected $casts = [
         'fecha' => 'date',
         'inicio' => 'datetime',
-        'fin' => 'datetime'
+        'fin' => 'datetime',
+        'hora_salida_programada' => 'datetime',
+        'hora_salida_real' => 'datetime',
+        'hora_llegada_programada' => 'datetime',
+        'hora_llegada_real' => 'datetime',
+        'recorrido_gps' => 'array',
+        'total_recaudado' => 'decimal:2',
+        'finalizado_en_parada' => 'boolean',
+        'cambio_bus' => 'boolean'
     ];
 
     public function bus()
@@ -53,7 +80,21 @@ class Trip extends Model
         return $this->hasMany(BusLocation::class);
     }
 
-    // Scopes
+    public function turno()
+    {
+        return $this->belongsTo(Turno::class);
+    }
+
+    public function nuevoBus()
+    {
+        return $this->belongsTo(Bus::class, 'nuevo_bus_id');
+    }
+
+    public function waypoints()
+    {
+        return $this->hasMany(TripWaypoint::class);
+    }
+
     public function scopeActive($query)
     {
         return $query->whereNull('fin');
@@ -64,13 +105,11 @@ class Trip extends Model
         return $query->whereNotNull('fin');
     }
 
-    // Calcular tarifa total del viaje
     public function getTotalFareAttribute()
     {
         return $this->transactions()->where('type', 'fare')->sum('amount');
     }
 
-    // Contar pasajeros
     public function getTotalPassengersAttribute()
     {
         return $this->transactions()->where('type', 'fare')->count();

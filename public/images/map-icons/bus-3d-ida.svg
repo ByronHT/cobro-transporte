@@ -1,0 +1,41 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Sombra -->
+  <ellipse cx="32" cy="58" rx="20" ry="4" fill="black" opacity="0.2"/>
+
+  <!-- Cuerpo del bus (vista isométrica) -->
+  <g transform="translate(32, 32)">
+    <!-- Parte trasera -->
+    <path d="M -12 -8 L -12 8 L -8 12 L -8 -4 Z" fill="#1e40af" opacity="0.8"/>
+
+    <!-- Lado izquierdo -->
+    <path d="M -12 -8 L 12 -8 L 16 -4 L -8 -4 Z" fill="#2563eb"/>
+
+    <!-- Lado derecho -->
+    <path d="M 12 -8 L 12 8 L 16 12 L 16 -4 Z" fill="#1d4ed8"/>
+
+    <!-- Techo -->
+    <path d="M -12 -8 L 12 -8 L 12 -12 L -12 -12 Z" fill="#3b82f6" opacity="0.9"/>
+
+    <!-- Ventanas laterales (izquierda) -->
+    <rect x="-10" y="-6" width="5" height="4" fill="#dbeafe" opacity="0.7" rx="0.5"/>
+    <rect x="-3" y="-6" width="5" height="4" fill="#dbeafe" opacity="0.7" rx="0.5"/>
+    <rect x="4" y="-6" width="5" height="4" fill="#dbeafe" opacity="0.7" rx="0.5"/>
+
+    <!-- Ventana frontal -->
+    <path d="M 13 -6 L 13 -2 L 15 -3 L 15 -5 Z" fill="#dbeafe" opacity="0.8"/>
+
+    <!-- Luces delanteras -->
+    <circle cx="14" cy="4" r="1.5" fill="#fef08a"/>
+    <circle cx="14" cy="0" r="1.5" fill="#fef08a"/>
+
+    <!-- Ruedas -->
+    <circle cx="-6" cy="8" r="3" fill="#1f2937"/>
+    <circle cx="-6" cy="8" r="1.5" fill="#6b7280"/>
+    <circle cx="8" cy="8" r="3" fill="#1f2937"/>
+    <circle cx="8" cy="8" r="1.5" fill="#6b7280"/>
+
+    <!-- Detalles de la carrocería -->
+    <line x1="-12" y1="2" x2="12" y2="2" stroke="#1e40af" stroke-width="0.5"/>
+    <line x1="-12" y1="-2" x2="12" y2="-2" stroke="#60a5fa" stroke-width="0.5" opacity="0.5"/>
+  </g>
+</svg>

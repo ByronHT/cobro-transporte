@@ -39,6 +39,14 @@ class UserController extends Controller
             'nit'=>'nullable|string|max:20',
             'password'=>'required|string|min:6|confirmed',
             'role'=>'required|in:admin,driver,passenger',
+            'login_code'=>'required|string|size:4|unique:users,login_code',
+            'ci'=>'nullable|string|max:20',
+            'birth_date'=>'nullable|date',
+            'user_type'=>'required|in:adult,senior,minor,student_school,student_university',
+            'school_name'=>'required_if:user_type,student_school|nullable|string|max:255',
+            'university_name'=>'required_if:user_type,student_university|nullable|string|max:255',
+            'university_year'=>'required_if:user_type,student_university|nullable|integer|min:1|max:7',
+            'university_end_year'=>'required_if:user_type,student_university|nullable|integer|min:2025'
         ]);
 
         User::create([
@@ -47,7 +55,16 @@ class UserController extends Controller
             'nit'=>$request->nit,
             'password'=>Hash::make($request->password),
             'role'=>$request->role,
-            'active'=>true
+            'active'=>$request->has('active') ? true : false,
+            'login_code'=>$request->login_code,
+            'ci'=>$request->ci,
+            'birth_date'=>$request->birth_date,
+            'user_type'=>$request->user_type,
+            'school_name'=>$request->school_name,
+            'university_name'=>$request->university_name,
+            'university_year'=>$request->university_year,
+            'university_end_year'=>$request->university_end_year,
+            'total_earnings'=>0
         ]);
 
         return redirect()->route('admin.users.index')->with('success','Usuario creado correctamente');

@@ -8,7 +8,28 @@ class Ruta extends Model
     use HasFactory;
 
     protected $table = 'rutas';
-    protected $fillable = ['nombre', 'descripcion', 'tarifa_base'];
+    protected $fillable = [
+        'nombre',
+        'descripcion',
+        'tarifa_base',
+        'linea_numero',
+        'ruta_ida_descripcion',
+        'ruta_ida_waypoints',
+        'ruta_vuelta_descripcion',
+        'ruta_vuelta_waypoints',
+        'tarifa_adulto',
+        'tarifa_descuento',
+        'activa'
+    ];
+
+    protected $casts = [
+        'ruta_ida_waypoints' => 'array',
+        'ruta_vuelta_waypoints' => 'array',
+        'tarifa_base' => 'decimal:2',
+        'tarifa_adulto' => 'decimal:2',
+        'tarifa_descuento' => 'decimal:2',
+        'activa' => 'boolean',
+    ];
 
     public function buses()
     {

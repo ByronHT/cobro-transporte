@@ -61,7 +61,16 @@
       "Bash(rm:*)",
       "Bash(cmd /c \"dir android\\app\\build\\outputs\\apk 2>nul\")",
       "Bash(cmd /c \"del /Q error.jpg 2>nul && echo Archivo error.jpg eliminado\")",
-      "Bash(del error.jpg)"
+      "Bash(del error.jpg)",
+      "WebFetch(domain:developers.google.com)",
+      "Bash(./gradlew signingReport:*)",
+      "Bash(cmd.exe /c \"C:\\Users\\brand\\Desktop\\cobro-transporte\\cobro-transporte\\get-sha1.bat\")",
+      "Bash(del erroractual.jpg)",
+      "Bash(cmd /c \"del /Q erroractual.jpg 2>nul && echo Archivo eliminado\")",
+      "Bash(php:*)",
+      "Bash(cmd /c \"dir /B *.md\")",
+      "Bash(cmd /c \"dir /B *.jpg *.png *.jpeg 2>nul\")",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []
