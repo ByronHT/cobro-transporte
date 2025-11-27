@@ -2668,6 +2668,384 @@ function DriverDashboard() {
                     )}
                 </div>
             )}
+
+            {showStartTurnoModal && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'rgba(0,0,0,0.7)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1000,
+                    padding: '20px'
+                }}>
+                    <div style={{
+                        background: 'white',
+                        borderRadius: '16px',
+                        padding: '30px',
+                        maxWidth: '500px',
+                        width: '100%'
+                    }}>
+                        <h3 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>
+                            Iniciar Turno
+                        </h3>
+
+                        <label style={{ display: 'block', marginBottom: '10px', fontWeight: '600' }}>
+                            Selecciona un Bus:
+                        </label>
+                        <select
+                            value={selectedBusForTurno?.id || ''}
+                            onChange={(e) => {
+                                const bus = busesDisponibles.find(b => b.id === parseInt(e.target.value));
+                                setSelectedBusForTurno(bus);
+                            }}
+                            style={{
+                                width: '100%',
+                                padding: '12px',
+                                border: '2px solid #e2e8f0',
+                                borderRadius: '8px',
+                                marginBottom: '16px',
+                                fontSize: '15px'
+                            }}
+                        >
+                            <option value="">-- Selecciona un bus --</option>
+                            {busesDisponibles.map(bus => (
+                                <option key={bus.id} value={bus.id}>
+                                    {bus.plate} - {bus.ruta?.nombre || 'Sin ruta'}
+                                </option>
+                            ))}
+                        </select>
+
+                        <label style={{ display: 'block', marginBottom: '10px', fontWeight: '600' }}>
+                            Hora de Fin Programada:
+                        </label>
+                        <input
+                            type="time"
+                            value={horaFinProgramada}
+                            onChange={(e) => setHoraFinProgramada(e.target.value)}
+                            style={{
+                                width: '100%',
+                                padding: '12px',
+                                border: '2px solid #e2e8f0',
+                                borderRadius: '8px',
+                                marginBottom: '20px',
+                                fontSize: '15px'
+                            }}
+                        />
+
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                            <button
+                                onClick={() => setShowStartTurnoModal(false)}
+                                style={{
+                                    flex: 1,
+                                    padding: '12px',
+                                    background: '#f3f4f6',
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    fontWeight: '600',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleIniciarTurno}
+                                disabled={!selectedBusForTurno || turnoLoading}
+                                style={{
+                                    flex: 1,
+                                    padding: '12px',
+                                    background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    fontWeight: '600',
+                                    cursor: 'pointer',
+                                    opacity: (!selectedBusForTurno || turnoLoading) ? 0.5 : 1
+                                }}
+                            >
+                                {turnoLoading ? 'Iniciando...' : 'Iniciar Turno'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showEndTurnoModal && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'rgba(0,0,0,0.7)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1000,
+                    padding: '20px'
+                }}>
+                    <div style={{
+                        background: 'white',
+                        borderRadius: '16px',
+                        padding: '30px',
+                        maxWidth: '400px',
+                        width: '100%',
+                        textAlign: 'center'
+                    }}>
+                        <div style={{
+                            width: '60px',
+                            height: '60px',
+                            background: '#fee2e2',
+                            borderRadius: '50%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            margin: '0 auto 20px'
+                        }}>
+                            <svg xmlns="http://www.w3.org/2000/svg" style={{ width: '30px', height: '30px', color: '#dc2626' }} viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                            </svg>
+                        </div>
+                        <h3 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '12px' }}>
+                            Finalizar Turno?
+                        </h3>
+                        <p style={{ color: '#64748b', marginBottom: '24px' }}>
+                            Se calculará el total recaudado y se actualizarán tus ganancias.
+                        </p>
+
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                            <button
+                                onClick={() => setShowEndTurnoModal(false)}
+                                style={{
+                                    flex: 1,
+                                    padding: '12px',
+                                    background: '#f3f4f6',
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    fontWeight: '600',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleFinalizarTurno}
+                                disabled={turnoLoading}
+                                style={{
+                                    flex: 1,
+                                    padding: '12px',
+                                    background: '#dc2626',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    fontWeight: '600',
+                                    cursor: 'pointer',
+                                    opacity: turnoLoading ? 0.5 : 1
+                                }}
+                            >
+                                {turnoLoading ? 'Finalizando...' : 'Finalizar'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showStartTripModal && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'rgba(0,0,0,0.7)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1000,
+                    padding: '20px'
+                }}>
+                    <div style={{
+                        background: 'white',
+                        borderRadius: '16px',
+                        padding: '30px',
+                        maxWidth: '500px',
+                        width: '100%'
+                    }}>
+                        <h3 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>
+                            Iniciar Viaje {tipoViaje === 'ida' ? 'de IDA' : 'de VUELTA'}
+                        </h3>
+
+                        <label style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            marginBottom: '16px',
+                            padding: '12px',
+                            background: '#f3f4f6',
+                            borderRadius: '8px',
+                            cursor: 'pointer'
+                        }}>
+                            <input
+                                type="checkbox"
+                                checked={cambiarBus}
+                                onChange={(e) => setCambiarBus(e.target.checked)}
+                                style={{ width: '18px', height: '18px' }}
+                            />
+                            <span style={{ fontWeight: '600' }}>Cambiar de bus</span>
+                        </label>
+
+                        {cambiarBus && (
+                            <>
+                                <label style={{ display: 'block', marginBottom: '10px', fontWeight: '600' }}>
+                                    Nuevo Bus:
+                                </label>
+                                <select
+                                    value={nuevoBusId || ''}
+                                    onChange={(e) => setNuevoBusId(parseInt(e.target.value))}
+                                    style={{
+                                        width: '100%',
+                                        padding: '12px',
+                                        border: '2px solid #e2e8f0',
+                                        borderRadius: '8px',
+                                        marginBottom: '16px',
+                                        fontSize: '15px'
+                                    }}
+                                >
+                                    <option value="">-- Selecciona un bus --</option>
+                                    {busesDisponibles.map(bus => (
+                                        <option key={bus.id} value={bus.id}>
+                                            {bus.plate} - {bus.ruta?.nombre || 'Sin ruta'}
+                                        </option>
+                                    ))}
+                                </select>
+                            </>
+                        )}
+
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                            <button
+                                onClick={() => { setShowStartTripModal(false); setCambiarBus(false); setNuevoBusId(null); }}
+                                style={{
+                                    flex: 1,
+                                    padding: '12px',
+                                    background: '#f3f4f6',
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    fontWeight: '600',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleIniciarViajeConTurno}
+                                disabled={isActionLoading || (cambiarBus && !nuevoBusId)}
+                                style={{
+                                    flex: 1,
+                                    padding: '12px',
+                                    background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    fontWeight: '600',
+                                    cursor: 'pointer',
+                                    opacity: (isActionLoading || (cambiarBus && !nuevoBusId)) ? 0.5 : 1
+                                }}
+                            >
+                                {isActionLoading ? 'Iniciando...' : 'Iniciar Viaje'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showEndTripModal && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'rgba(0,0,0,0.7)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1000,
+                    padding: '20px'
+                }}>
+                    <div style={{
+                        background: 'white',
+                        borderRadius: '16px',
+                        padding: '30px',
+                        maxWidth: '400px',
+                        width: '100%'
+                    }}>
+                        <h3 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>
+                            Finalizar Viaje
+                        </h3>
+
+                        {tipoViaje === 'ida' && (
+                            <label style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                marginBottom: '20px',
+                                padding: '12px',
+                                background: '#d1fae5',
+                                borderRadius: '8px',
+                                cursor: 'pointer'
+                            }}>
+                                <input
+                                    type="checkbox"
+                                    checked={crearViajeVuelta}
+                                    onChange={(e) => setCrearViajeVuelta(e.target.checked)}
+                                    style={{ width: '18px', height: '18px' }}
+                                />
+                                <span style={{ fontWeight: '600', color: '#065f46' }}>
+                                    Crear viaje de VUELTA automáticamente
+                                </span>
+                            </label>
+                        )}
+
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                            <button
+                                onClick={() => { setShowEndTripModal(false); setCrearViajeVuelta(false); }}
+                                style={{
+                                    flex: 1,
+                                    padding: '12px',
+                                    background: '#f3f4f6',
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    fontWeight: '600',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleFinalizarViajeConVuelta}
+                                disabled={isActionLoading}
+                                style={{
+                                    flex: 1,
+                                    padding: '12px',
+                                    background: '#dc2626',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    fontWeight: '600',
+                                    cursor: 'pointer',
+                                    opacity: isActionLoading ? 0.5 : 1
+                                }}
+                            >
+                                {isActionLoading ? 'Finalizando...' : 'Finalizar'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
