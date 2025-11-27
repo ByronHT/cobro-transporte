@@ -364,6 +364,11 @@ function PassengerDashboard() {
                         title: 'Error de ubicación',
                         message: 'No se pudo obtener tu ubicación. Verifica los permisos.'
                     });
+                },
+                {
+                    enableHighAccuracy: false,
+                    timeout: 10000,
+                    maximumAge: 30000
                 }
             );
         } else {

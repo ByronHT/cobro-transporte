@@ -70,7 +70,9 @@
       "Bash(php:*)",
       "Bash(cmd /c \"dir /B *.md\")",
       "Bash(cmd /c \"dir /B *.jpg *.png *.jpeg 2>nul\")",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(cmd /c \"dir /B public\\images\\map-icons 2>nul\")",
+      "Bash(cmd /c dir publicimagesmap-icons)"
     ],
     "deny": [],
     "ask": []

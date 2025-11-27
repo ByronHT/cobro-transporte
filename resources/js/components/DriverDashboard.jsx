@@ -84,6 +84,19 @@ function DriverDashboard() {
     const [reversalReason, setReversalReason] = useState('');
     const [selectedRefundForReversal, setSelectedRefundForReversal] = useState(null);
 
+    const [showStartTurnoModal, setShowStartTurnoModal] = useState(false);
+    const [showEndTurnoModal, setShowEndTurnoModal] = useState(false);
+    const [showStartTripModal, setShowStartTripModal] = useState(false);
+    const [showEndTripModal, setShowEndTripModal] = useState(false);
+    const [busesDisponibles, setBusesDisponibles] = useState([]);
+    const [selectedBusForTurno, setSelectedBusForTurno] = useState(null);
+    const [horaFinProgramada, setHoraFinProgramada] = useState('');
+    const [turnoLoading, setTurnoLoading] = useState(false);
+    const [tipoViaje, setTipoViaje] = useState('ida');
+    const [cambiarBus, setCambiarBus] = useState(false);
+    const [nuevoBusId, setNuevoBusId] = useState('');
+    const [crearViajeVuelta, setCrearViajeVuelta] = useState(true);
+
     // 📍 Hook de tracking GPS optimizado
     const gpsTracking = useGPSTracking({
         busId: busId,
@@ -406,6 +419,126 @@ function DriverDashboard() {
             const errorMessage = err.response?.data?.message || 'Error al guardar el reporte.';
             setError(errorMessage);
             console.error("Error al guardar reporte:", err);
+        } finally {
+            setIsActionLoading(false);
+        }
+    };
+
+    const handleIniciarTurno = async () => {
+        if (!selectedBusForTurno) {
+            showNotification({
+                type: 'error',
+                title: 'Error',
+                message: 'Selecciona un bus para iniciar el turno'
+            });
+            return;
+        }
+
+        setTurnoLoading(true);
+        try {
+            await apiClient.post('/api/turnos', {
+                bus_id: selectedBusForTurno.id,
+                hora_fin_programada: horaFinProgramada || null
+            });
+
+            setShowStartTurnoModal(false);
+            await fetchDriverData();
+            showNotification({
+                type: 'success',
+                title: 'Turno iniciado',
+                message: `Turno iniciado en bus ${selectedBusForTurno.plate}`
+            });
+        } catch (err) {
+            const errorMessage = err.response?.data?.message || 'Error al iniciar turno';
+            showNotification({
+                type: 'error',
+                title: 'Error',
+                message: errorMessage
+            });
+        } finally {
+            setTurnoLoading(false);
+        }
+    };
+
+    const handleFinalizarTurno = async () => {
+        setTurnoLoading(true);
+        try {
+            await apiClient.post('/api/turnos/finalizar');
+
+            setShowEndTurnoModal(false);
+            await fetchDriverData();
+            showNotification({
+                type: 'success',
+                title: 'Turno finalizado',
+                message: 'El turno ha sido finalizado correctamente'
+            });
+        } catch (err) {
+            const errorMessage = err.response?.data?.message || 'Error al finalizar turno';
+            showNotification({
+                type: 'error',
+                title: 'Error',
+                message: errorMessage
+            });
+        } finally {
+            setTurnoLoading(false);
+        }
+    };
+
+    const handleIniciarViajeConTurno = async () => {
+        setIsActionLoading(true);
+        try {
+            const payload = {
+                bus_id: cambiarBus ? nuevoBusId : busId,
+                tipo_viaje: tipoViaje
+            };
+
+            await apiClient.post('/api/driver/request-trip-start', payload);
+
+            setShowStartTripModal(false);
+            setCambiarBus(false);
+            setNuevoBusId('');
+            await fetchDriverData();
+            showNotification({
+                type: 'success',
+                title: 'Viaje iniciado',
+                message: `Viaje de ${tipoViaje.toUpperCase()} iniciado correctamente`
+            });
+        } catch (err) {
+            const errorMessage = err.response?.data?.message || 'Error al iniciar viaje';
+            showNotification({
+                type: 'error',
+                title: 'Error',
+                message: errorMessage
+            });
+        } finally {
+            setIsActionLoading(false);
+        }
+    };
+
+    const handleFinalizarViajeConVuelta = async () => {
+        setIsActionLoading(true);
+        try {
+            const payload = {
+                bus_id: busId,
+                crear_viaje_vuelta: tipoViaje === 'ida' ? crearViajeVuelta : false
+            };
+
+            await apiClient.post('/api/driver/request-trip-end', payload);
+
+            setShowEndTripModal(false);
+            await fetchDriverData();
+            showNotification({
+                type: 'success',
+                title: 'Viaje finalizado',
+                message: 'El viaje ha sido finalizado correctamente'
+            });
+        } catch (err) {
+            const errorMessage = err.response?.data?.message || 'Error al finalizar viaje';
+            showNotification({
+                type: 'error',
+                title: 'Error',
+                message: errorMessage
+            });
         } finally {
             setIsActionLoading(false);
         }
