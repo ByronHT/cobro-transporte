@@ -32,6 +32,7 @@ function DriverDashboard() {
     const [isActionLoading, setIsActionLoading] = useState(false);
     const [notification, setNotification] = useState(null);
     const [lastTransactionCount, setLastTransactionCount] = useState(0);
+    // Generar sessionId único para esta sesión (evita notificaciones duplicadas al recargar)
     const sessionIdRef = useRef((() => {
         const existing = sessionStorage.getItem('driver_session_id');
         if (existing) return existing;
@@ -41,19 +42,24 @@ function DriverDashboard() {
     })());
 
     const [lastEventId, setLastEventId] = useState(() => {
+        // Cargar el último ID de evento desde sessionStorage (no localStorage)
         const saved = sessionStorage.getItem(`driver_last_event_${sessionIdRef.current}`);
         return saved ? parseInt(saved) : 0;
     });
 
+    // isInitialLoad ahora solo es true la primera vez en esta sesión
     const isInitialLoadRef = useRef(true);
 
+    // Set para trackear eventos ya notificados (evita duplicados)
     const notifiedEventsRef = useRef(new Set());
 
+    // Estados para sistema de reportes
     const [tripReport, setTripReport] = useState('');
     const [tripReportPhoto, setTripReportPhoto] = useState(null);
     const [showReportModal, setShowReportModal] = useState(false);
     const [isFinalizingTrip, setIsFinalizingTrip] = useState(false); // Para saber si es finalizar viaje o solo reporte
 
+    // Estados para sistema de devoluciones
     const [searchCardUid, setSearchCardUid] = useState('');
     const [searchResults, setSearchResults] = useState(null);
     const [searchLoading, setSearchLoading] = useState(false);
@@ -62,6 +68,7 @@ function DriverDashboard() {
     const [selectedTransaction, setSelectedTransaction] = useState(null);
     const [refundReason, setRefundReason] = useState('');
 
+    // Estados para modal de historial completo de transacciones
     const [showAllTransactions, setShowAllTransactions] = useState(false);
     const [allTransactions, setAllTransactions] = useState([]);
     const [loadingAllTransactions, setLoadingAllTransactions] = useState(false);
@@ -69,6 +76,7 @@ function DriverDashboard() {
     const [filterType, setFilterType] = useState('all'); // all, fare, refund
     const [showRefundSection, setShowRefundSection] = useState(false);
 
+    // Estados para nueva vista de Historial y Devoluciones
     const [showFullHistoryView, setShowFullHistoryView] = useState(false);
     const [showRefundsView, setShowRefundsView] = useState(false);
     const [completedRefunds, setCompletedRefunds] = useState([]);
@@ -76,21 +84,7 @@ function DriverDashboard() {
     const [reversalReason, setReversalReason] = useState('');
     const [selectedRefundForReversal, setSelectedRefundForReversal] = useState(null);
 
-    const [turnoActivo, setTurnoActivo] = useState(null);
-    const [busesDisponibles, setBusesDisponibles] = useState([]);
-    const [selectedBusForTurno, setSelectedBusForTurno] = useState(null);
-    const [showStartTurnoModal, setShowStartTurnoModal] = useState(false);
-    const [showEndTurnoModal, setShowEndTurnoModal] = useState(false);
-    const [horaFinProgramada, setHoraFinProgramada] = useState('18:00');
-    const [turnoLoading, setTurnoLoading] = useState(false);
-
-    const [tipoViaje, setTipoViaje] = useState('ida'); // 'ida' o 'vuelta'
-    const [showStartTripModal, setShowStartTripModal] = useState(false);
-    const [showEndTripModal, setShowEndTripModal] = useState(false);
-    const [crearViajeVuelta, setCrearViajeVuelta] = useState(false);
-    const [cambiarBus, setCambiarBus] = useState(false);
-    const [nuevoBusId, setNuevoBusId] = useState(null);
-
+    // 📍 Hook de tracking GPS optimizado
     const gpsTracking = useGPSTracking({
         busId: busId,
         isTripActive: isTripActive,
@@ -127,10 +121,12 @@ function DriverDashboard() {
     };
 
     const fetchDriverData = async () => {
+        // Solo mostrar loading en la primera carga absoluta
         const isFirstLoad = !driverData && !isTripActive;
         if (isFirstLoad) {
             setLoading(true);
         }
+        // No limpiar error en actualizaciones silenciosas para no interrumpir UI
         if (isFirstLoad) {
             setError(null);
         }
@@ -145,6 +141,7 @@ function DriverDashboard() {
             const transactionsResponse = await apiClient.get('/api/driver/current-trip-transactions');
             const newTransactions = transactionsResponse.data;
 
+            // Detectar nueva transacción y mostrar notificación
             if (lastTransactionCount > 0 && newTransactions.length > lastTransactionCount) {
                 const latestTransaction = newTransactions[0];
                 showNotification({
@@ -157,6 +154,7 @@ function DriverDashboard() {
             setTransactions(newTransactions);
             setLastTransactionCount(newTransactions.length);
 
+            // Consultar eventos de pago nuevos
             const eventsResponse = await apiClient.get(`/api/driver/current-trip-payment-events?last_event_id=${lastEventId}`);
             const newEvents = eventsResponse.data;
 
@@ -164,17 +162,21 @@ function DriverDashboard() {
             console.log('🔔 [DRIVER] isInitialLoad:', isInitialLoadRef.current);
             console.log('🔔 [DRIVER] lastEventId:', lastEventId);
 
+            // Marcar que ya no es la carga inicial INMEDIATAMENTE
             const wasInitialLoad = isInitialLoadRef.current;
             if (isInitialLoadRef.current) {
                 isInitialLoadRef.current = false;
                 console.log('🔔 [DRIVER] Marcando isInitialLoad como false');
             }
 
+            // Procesar cada evento nuevo y mostrar notificación
             if (newEvents.length > 0) {
                 console.log('🔔 [DRIVER] Procesando eventos. wasInitialLoad:', wasInitialLoad);
+                // Solo mostrar notificaciones si NO era la carga inicial
                 if (!wasInitialLoad) {
                     console.log('🔔 [DRIVER] Mostrando notificaciones para', newEvents.length, 'eventos');
                     newEvents.forEach(event => {
+                        // Verificar si ya se notificó este evento (evita duplicados)
                         if (notifiedEventsRef.current.has(event.id)) {
                             console.log('🔔 [DRIVER] Evento ya notificado, omitiendo:', event.id);
                             return; // Skip este evento
@@ -182,6 +184,7 @@ function DriverDashboard() {
 
                         console.log('🔔 [DRIVER] Evento:', event.event_type, event.message);
 
+                        // Marcar como notificado ANTES de mostrar
                         notifiedEventsRef.current.add(event.id);
 
                         if (event.event_type === 'success') {
@@ -236,17 +239,21 @@ function DriverDashboard() {
                     });
                 }
 
+                // Actualizar el último ID procesado y guardarlo en sessionStorage (para esta sesión)
                 const maxId = Math.max(...newEvents.map(e => e.id));
                 setLastEventId(maxId);
                 sessionStorage.setItem(`driver_last_event_${sessionIdRef.current}`, maxId.toString());
             }
         } catch (err) {
             if (err.response && err.response.status === 404 && err.response.data.message === 'No hay viaje activo.') {
+                // No hay viaje activo - resetear estado
                 setIsTripActive(false);
                 setDriverData(null);
                 setTransactions([]);
                 setLastTransactionCount(0);
+                // NO resetear lastEventId aquí, se mantiene para evitar notificaciones repetidas
 
+                // Cargar perfil del conductor y buses disponibles solo si aún no se han cargado
                 if (!driverId || availableBuses.length === 0) {
                     try {
                         const [profileResponse, busesResponse] = await Promise.all([
@@ -260,10 +267,12 @@ function DriverDashboard() {
                     }
                 }
             } else if (err.response && err.response.status === 401) {
+                // Verificar si es un error persistente o temporal
                 const errorMessage = err.response.data?.message || '';
 
                 if (errorMessage.toLowerCase().includes('unauthenticated') ||
                     errorMessage.toLowerCase().includes('token')) {
+                    // Token realmente inválido → cerrar sesión
                     console.error('Token inválido. Cerrando sesión...');
                     localStorage.removeItem('driver_token');
                     localStorage.removeItem('driver_role');
@@ -271,14 +280,17 @@ function DriverDashboard() {
                     sessionStorage.clear();
                     navigate('/login');
                 } else {
+                    // Error temporal → solo logear, no cerrar sesión
                     console.warn('Error 401 temporal. Reintentando en siguiente ciclo...');
                 }
             } else {
+                // No mostrar error en recargas automáticas
                 if (isFirstLoad) {
                     setError('Error al cargar datos del chofer.');
                 }
             }
         } finally {
+            // Solo ocultar loading si fue una carga inicial
             if (isFirstLoad) {
                 setLoading(false);
             }
@@ -288,12 +300,14 @@ function DriverDashboard() {
     const handleTripAction = async (action) => {
         setError(null);
 
+        // Si es finalizar viaje, mostrar modal de reporte
         if (action === 'end') {
             setIsFinalizingTrip(true);
             setShowReportModal(true);
             return;
         }
 
+        // Lógica original para iniciar viaje
         setIsActionLoading(true);
         try {
             const endpoint = '/api/driver/request-trip-start';
@@ -307,6 +321,7 @@ function DriverDashboard() {
 
             await apiClient.post(endpoint, payload);
 
+            // Limpiar solicitudes de devolución al iniciar nuevo viaje
             setRefundRequests([]);
             setCompletedRefunds([]);
 
@@ -320,6 +335,7 @@ function DriverDashboard() {
         }
     };
 
+    // Función para finalizar viaje con reporte
     const handleEndTripWithReport = async () => {
         setIsActionLoading(true);
         try {
@@ -347,6 +363,7 @@ function DriverDashboard() {
         }
     };
 
+    // Función para guardar reporte sin finalizar viaje
     const handleSaveReport = async () => {
         if (!tripReport.trim()) {
             showNotification({
@@ -394,16 +411,19 @@ function DriverDashboard() {
         }
     };
 
+    // Cargar solicitudes de devolución
     const loadRefundRequests = async () => {
         try {
             const response = await apiClient.get('/api/driver/refund-requests');
             if (response.data.success) {
                 const requests = response.data.refund_requests;
 
+                // Filtrar solo las solicitudes del viaje actual (si existe)
                 if (driverData?.trip?.id) {
                     const currentTripRequests = requests.filter(req => req.trip_id === driverData.trip.id);
                     setRefundRequests(currentTripRequests);
                 } else {
+                    // Si no hay viaje activo, no mostrar solicitudes
                     setRefundRequests([]);
                 }
             }
@@ -412,6 +432,7 @@ function DriverDashboard() {
         }
     };
 
+    // Cargar todas las transacciones del viaje actual (sin límite)
     const loadAllTransactions = async () => {
         if (!driverData?.trip?.id) return;
 
@@ -431,6 +452,7 @@ function DriverDashboard() {
         }
     };
 
+    // Cargar devoluciones completadas del viaje actual
     const loadCompletedRefunds = async () => {
         if (!driverData?.trip?.id) return;
 
@@ -438,6 +460,7 @@ function DriverDashboard() {
         try {
             const response = await apiClient.get('/api/driver/refund-requests');
             if (response.data.success) {
+                // Filtrar solo las completadas del viaje actual
                 const completed = response.data.refund_requests.filter(
                     r => r.status === 'completed' && r.trip_id === driverData.trip.id
                 );
@@ -455,6 +478,7 @@ function DriverDashboard() {
         }
     };
 
+    // Revertir una devolución
     const handleReverseRefund = async () => {
         if (!selectedRefundForReversal) return;
         if (!reversalReason.trim() || reversalReason.trim().length < 10) {
@@ -478,9 +502,11 @@ function DriverDashboard() {
                 message: response.data.message
             });
 
+            // Recargar datos
             await loadCompletedRefunds();
             await fetchDriverData();
 
+            // Limpiar y cerrar
             setSelectedRefundForReversal(null);
             setReversalReason('');
         } catch (err) {
@@ -493,6 +519,7 @@ function DriverDashboard() {
         }
     };
 
+    // Buscar transacciones por UID
     const searchTransactionsByUid = async () => {
         if (!searchCardUid || !driverData) return;
 
@@ -525,6 +552,7 @@ function DriverDashboard() {
         }
     };
 
+    // Solicitar devolución
     const requestRefund = async () => {
         if (!selectedTransaction || !refundReason) {
             showNotification({
@@ -564,6 +592,7 @@ function DriverDashboard() {
         }
     };
 
+    // Aprobar o rechazar solicitud de devolución
     const approveOrRejectRefund = async (refundId, action, comments = '') => {
         const actionText = action === 'approve' ? 'aprobar' : 'rechazar';
         const confirmText = action === 'approve'
@@ -597,6 +626,7 @@ function DriverDashboard() {
         }
     };
 
+    // Cargar solicitudes de devolución al iniciar
     useEffect(() => {
         if (isTripActive) {
             loadRefundRequests();
@@ -616,203 +646,13 @@ function DriverDashboard() {
     const showNotification = (notif) => {
         console.log('🔔 [DRIVER] showNotification llamado:', notif);
         setNotification(notif);
+        // Auto-ocultar después de 5 segundos
         setTimeout(() => {
             setNotification(null);
         }, 5000);
     };
 
-
-    useEffect(() => {
-        const fetchTurnoActivo = async () => {
-            try {
-                const response = await apiClient.get('/api/driver/turno/active');
-                if (response.data.turno) {
-                    setTurnoActivo(response.data.turno);
-                }
-            } catch (err) {
-                if (err.response?.status !== 404) {
-                    console.error('Error cargando turno activo:', err);
-                }
-            }
-        };
-
-        if (!loading) {
-            fetchTurnoActivo();
-        }
-    }, [loading]);
-
-    const fetchBusesDisponibles = async () => {
-        try {
-            const response = await apiClient.get('/api/driver/buses/disponibles');
-            setBusesDisponibles(response.data.buses);
-        } catch (err) {
-            console.error('Error cargando buses disponibles:', err);
-            showNotification({
-                type: 'error',
-                title: 'Error',
-                message: 'No se pudieron cargar los buses disponibles'
-            });
-        }
-    };
-
-    const handleIniciarTurno = async () => {
-        if (!selectedBusForTurno) {
-            showNotification({
-                type: 'error',
-                title: 'Error',
-                message: 'Debes seleccionar un bus'
-            });
-            return;
-        }
-
-        setTurnoLoading(true);
-        try {
-            const response = await apiClient.post('/api/driver/turno/start', {
-                bus_id: selectedBusForTurno.id,
-                hora_fin_programada: horaFinProgramada
-            });
-
-            setTurnoActivo(response.data.turno);
-            setShowStartTurnoModal(false);
-            setSelectedBusForTurno(null);
-
-            showNotification({
-                type: 'success',
-                title: 'Turno Iniciado',
-                message: `Turno iniciado con bus ${response.data.turno.busInicial.plate}`
-            });
-        } catch (err) {
-            const errorMsg = err.response?.data?.error || 'Error al iniciar turno';
-            showNotification({
-                type: 'error',
-                title: 'Error',
-                message: errorMsg
-            });
-        } finally {
-            setTurnoLoading(false);
-        }
-    };
-
-    const handleFinalizarTurno = async () => {
-        if (isTripActive) {
-            showNotification({
-                type: 'error',
-                title: 'Error',
-                message: 'Debes finalizar el viaje actual antes de terminar el turno'
-            });
-            return;
-        }
-
-        setTurnoLoading(true);
-        try {
-            const response = await apiClient.post('/api/driver/turno/finish');
-
-            showNotification({
-                type: 'success',
-                title: 'Turno Finalizado',
-                message: `Total recaudado: ${response.data.turno.total_recaudado} Bs`
-            });
-
-            setTurnoActivo(null);
-            setShowEndTurnoModal(false);
-        } catch (err) {
-            const errorMsg = err.response?.data?.error || 'Error al finalizar turno';
-            showNotification({
-                type: 'error',
-                title: 'Error',
-                message: errorMsg
-            });
-        } finally {
-            setTurnoLoading(false);
-        }
-    };
-
-
-    const handleIniciarViajeConTurno = async () => {
-        if (!turnoActivo) {
-            showNotification({
-                type: 'error',
-                title: 'Error',
-                message: 'Debes iniciar un turno primero'
-            });
-            return;
-        }
-
-        setIsActionLoading(true);
-        try {
-            const busIdToUse = cambiarBus ? nuevoBusId : (busId || turnoActivo.bus_inicial_id);
-
-            const response = await apiClient.post('/api/driver/trip/start-with-turno', {
-                bus_id: busIdToUse,
-                tipo_viaje: tipoViaje,
-                cambio_bus: cambiarBus,
-                nuevo_bus_id: cambiarBus ? nuevoBusId : null
-            });
-
-            setIsTripActive(true);
-            setBusId(busIdToUse);
-            setDriverData(response.data);
-            setShowStartTripModal(false);
-            setCambiarBus(false);
-            setNuevoBusId(null);
-
-            showNotification({
-                type: 'success',
-                title: 'Viaje Iniciado',
-                message: `Viaje de ${tipoViaje.toUpperCase()} iniciado`
-            });
-        } catch (err) {
-            const errorMsg = err.response?.data?.error || 'Error al iniciar viaje';
-            showNotification({
-                type: 'error',
-                title: 'Error',
-                message: errorMsg
-            });
-        } finally {
-            setIsActionLoading(false);
-        }
-    };
-
-    const handleFinalizarViajeConVuelta = async () => {
-        setIsActionLoading(true);
-        try {
-            const response = await apiClient.post('/api/driver/trip/finish', {
-                trip_id: driverData?.trip?.id,
-                crear_viaje_vuelta: crearViajeVuelta
-            });
-
-            if (crearViajeVuelta && response.data.nuevo_viaje) {
-                showNotification({
-                    type: 'success',
-                    title: 'Viaje Finalizado',
-                    message: 'Viaje de vuelta creado automáticamente'
-                });
-                setIsTripActive(true);
-                setDriverData({ trip: response.data.nuevo_viaje });
-            } else {
-                showNotification({
-                    type: 'success',
-                    title: 'Viaje Finalizado',
-                    message: `Total recaudado: ${response.data.trip.total_recaudado || 0} Bs`
-                });
-                setIsTripActive(false);
-                setDriverData(null);
-            }
-
-            setShowEndTripModal(false);
-            setCrearViajeVuelta(false);
-        } catch (err) {
-            const errorMsg = err.response?.data?.error || 'Error al finalizar viaje';
-            showNotification({
-                type: 'error',
-                title: 'Error',
-                message: errorMsg
-            });
-        } finally {
-            setIsActionLoading(false);
-        }
-    };
-
+    // Solo mostrar pantalla de carga en la primera vez (cuando no hay datos)
     if (loading && !driverData && !isTripActive && !driverId) {
         return (
             <div style={{
@@ -847,11 +687,236 @@ function DriverDashboard() {
             fontFamily: 'system-ui, -apple-system, sans-serif',
             padding: '0'
         }}>
+            {/* Header */}
+            <div style={{
+                background: 'rgba(255,255,255,0.95)',
+                backdropFilter: 'blur(10px)',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                padding: '16px 20px',
+                position: 'sticky',
+                top: 0,
+                zIndex: 100
+            }}>
+                <div style={{
+                    maxWidth: '800px',
+                    margin: '0 auto',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{
+                            width: '45px',
+                            height: '45px',
+                            background: 'linear-gradient(135deg, #1e3a8a, #3b82f6)',
+                            borderRadius: '12px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: '0 4px 8px rgba(30,58,138,0.3)'
+                        }}>
+                            <svg xmlns="http://www.w3.org/2000/svg" style={{ width: '24px', height: '24px' }} viewBox="0 0 20 20" fill="white">
+                                <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
+                                <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1v-5a1 1 0 00-.293-.707l-2-2A1 1 0 0015 7h-1z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h2 style={{
+                                color: '#1e3a8a',
+                                fontSize: '20px',
+                                fontWeight: '700',
+                                margin: 0
+                            }}>InterFlow</h2>
+                            <p style={{
+                                color: '#64748b',
+                                fontSize: '12px',
+                                margin: 0
+                            }}>Panel de Chofer</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={handleLogout}
+                        style={{
+                            padding: '8px 16px',
+                            background: '#dc2626',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            transition: 'all 0.3s'
+                        }}
+                        onMouseEnter={(e) => e.target.style.background = '#b91c1c'}
+                        onMouseLeave={(e) => e.target.style.background = '#dc2626'}
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" style={{ width: '16px', height: '16px' }} viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clipRule="evenodd" />
+                        </svg>
+                        Salir
+                    </button>
+                </div>
+            </div>
+
+            {/* Main Content */}
             <div style={{
                 maxWidth: '800px',
                 margin: '0 auto',
                 padding: '20px'
             }}>
+                {/* Error Alert */}
+                {error && (
+                    <div style={{
+                        background: '#fef2f2',
+                        border: '2px solid #fecaca',
+                        borderRadius: '12px',
+                        padding: '16px',
+                        marginBottom: '20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        boxShadow: '0 4px 8px rgba(220, 38, 38, 0.1)'
+                    }}>
+                        <svg xmlns="http://www.w3.org/2000/svg" style={{ width: '24px', height: '24px', flexShrink: 0, color: '#dc2626' }} viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                        </svg>
+                        <span style={{ color: '#dc2626', fontSize: '15px', fontWeight: '500' }}>{error}</span>
+                    </div>
+                )}
+
+                {!isTripActive ? (
+                    /* No Active Trip */
+                    <div style={{
+                        background: 'white',
+                        borderRadius: '16px',
+                        padding: '40px 30px',
+                        boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
+                        textAlign: 'center'
+                    }}>
+                        <div style={{
+                            width: '80px',
+                            height: '80px',
+                            background: 'linear-gradient(135deg, #f3f4f6, #e5e7eb)',
+                            borderRadius: '50%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            margin: '0 auto 20px'
+                        }}>
+                            <svg xmlns="http://www.w3.org/2000/svg" style={{ width: '40px', height: '40px', color: '#6b7280' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <h3 style={{
+                            color: '#1e293b',
+                            fontSize: '22px',
+                            fontWeight: '700',
+                            margin: '0 0 10px 0'
+                        }}>No hay viaje activo</h3>
+                        <p style={{
+                            color: '#64748b',
+                            fontSize: '15px',
+                            marginBottom: '30px'
+                        }}>Selecciona un bus e inicia un viaje para empezar a cobrar</p>
+
+                        {availableBuses.length > 0 ? (
+                            <>
+                                <label style={{
+                                    display: 'block',
+                                    color: '#1e293b',
+                                    fontSize: '14px',
+                                    fontWeight: '600',
+                                    marginBottom: '10px',
+                                    textAlign: 'left'
+                                }}>
+                                    Selecciona un Bus
+                                </label>
+                                <select
+                                    value={busId || ''}
+                                    onChange={(e) => setBusId(e.target.value ? parseInt(e.target.value) : null)}
+                                    style={{
+                                        width: '100%',
+                                        padding: '14px',
+                                        border: '2px solid #e2e8f0',
+                                        borderRadius: '10px',
+                                        fontSize: '15px',
+                                        marginBottom: '20px',
+                                        background: 'white',
+                                        cursor: 'pointer',
+                                        outline: 'none',
+                                        transition: 'all 0.3s'
+                                    }}
+                                    onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                                    onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+                                >
+                                    <option value="">-- Selecciona un bus --</option>
+                                    {availableBuses.map(bus => (
+                                        <option key={bus.id} value={bus.id}>
+                                            {bus.plate} ({bus.code}) - {bus.ruta ? bus.ruta.nombre : 'Sin Ruta'}
+                                        </option>
+                                    ))}
+                                </select>
+                            </>
+                        ) : (
+                            <p style={{ color: '#6b7280', marginBottom: '20px' }}>Cargando buses disponibles...</p>
+                        )}
+
+                        <button
+                            onClick={() => handleTripAction('start')}
+                            disabled={isActionLoading || !busId}
+                            style={{
+                                width: '100%',
+                                padding: '16px',
+                                background: (!busId || isActionLoading) ? '#94a3b8' : 'linear-gradient(135deg, #22c55e, #16a34a)',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '12px',
+                                fontSize: '17px',
+                                fontWeight: '700',
+                                cursor: (!busId || isActionLoading) ? 'not-allowed' : 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '10px',
+                                boxShadow: (!busId || isActionLoading) ? 'none' : '0 6px 16px rgba(34, 197, 94, 0.4)',
+                                transition: 'all 0.3s'
+                            }}
+                            onMouseEnter={(e) => {
+                                if (busId && !isActionLoading) e.target.style.transform = 'translateY(-2px)';
+                            }}
+                            onMouseLeave={(e) => {
+                                if (busId && !isActionLoading) e.target.style.transform = 'translateY(0)';
+                            }}
+                        >
+                            {isActionLoading ? (
+                                <>
+                                    <div style={{
+                                        width: '20px',
+                                        height: '20px',
+                                        border: '3px solid rgba(255,255,255,0.3)',
+                                        borderTop: '3px solid white',
+                                        borderRadius: '50%',
+                                        animation: 'spin 1s linear infinite'
+                                    }}></div>
+                                    Iniciando...
+                                </>
+                            ) : (
+                                <>
+                                    <svg xmlns="http://www.w3.org/2000/svg" style={{ width: '24px', height: '24px' }} viewBox="0 0 20 20" fill="currentColor">
+                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                                    </svg>
+                                    Iniciar Viaje
+                                </>
+                            )}
+                        </button>
+                    </div>
+                ) : (
+                    /* Active Trip */
+                    <>
+                        {/* Trip Info Card - Compacto */}
                         <div style={{
                             background: 'white',
                             borderRadius: '12px',
@@ -860,6 +925,45 @@ function DriverDashboard() {
                             boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
                             border: '1px solid #e5e7eb'
                         }}>
+                            {/* Header compacto */}
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                marginBottom: '12px',
+                                paddingBottom: '12px',
+                                borderBottom: '1px solid #f3f4f6'
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <div style={{
+                                        width: '32px',
+                                        height: '32px',
+                                        background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                                        borderRadius: '8px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                    }}>
+                                        <svg xmlns="http://www.w3.org/2000/svg" style={{ width: '18px', height: '18px' }} viewBox="0 0 20 20" fill="white">
+                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h3 style={{ color: '#166534', fontSize: '15px', fontWeight: '700', margin: 0 }}>Viaje Activo</h3>
+                                        <p style={{ color: '#6b7280', fontSize: '11px', margin: 0 }}>
+                                            {new Date(driverData.trip.inicio).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div style={{ textAlign: 'right' }}>
+                                    <p style={{ color: '#6b7280', fontSize: '11px', margin: 0 }}>Bus</p>
+                                    <p style={{ color: '#1e293b', fontSize: '14px', fontWeight: '600', margin: 0 }}>
+                                        {driverData.trip.bus?.plate || 'N/A'}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Badge de estado GPS */}
                             {gpsTracking.isTracking && (
                                 <div style={{
                                     display: 'flex',
@@ -895,6 +999,23 @@ function DriverDashboard() {
                                 </div>
                             )}
 
+                            {/* Info en grid compacto */}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                                <div>
+                                    <p style={{ color: '#6b7280', fontSize: '11px', margin: '0 0 2px 0' }}>Chofer</p>
+                                    <p style={{ color: '#1e293b', fontSize: '13px', fontWeight: '600', margin: 0 }}>
+                                        {driverData.user?.name || 'N/A'}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p style={{ color: '#6b7280', fontSize: '11px', margin: '0 0 2px 0' }}>Ruta</p>
+                                    <p style={{ color: '#1e293b', fontSize: '13px', fontWeight: '600', margin: 0 }}>
+                                        {driverData.trip.ruta?.nombre || 'N/A'}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Saldos compactos */}
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                                 <div style={{
                                     background: 'linear-gradient(135deg, #059669, #10b981)',
@@ -925,6 +1046,95 @@ function DriverDashboard() {
                             </div>
                         </div>
 
+                        {/* Botones de acción - Ahora separados */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '16px' }}>
+                                <button
+                                    onClick={() => {
+                                        setIsFinalizingTrip(false);
+                                        setShowReportModal(true);
+                                    }}
+                                    style={{
+                                        width: '100%',
+                                        padding: '12px',
+                                        background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '10px',
+                                        fontSize: '14px',
+                                        fontWeight: '700',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '8px',
+                                        transition: 'all 0.3s',
+                                        boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.target.style.transform = 'translateY(-2px)';
+                                        e.target.style.boxShadow = '0 6px 16px rgba(245, 158, 11, 0.4)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.target.style.transform = 'translateY(0)';
+                                        e.target.style.boxShadow = '0 4px 12px rgba(245, 158, 11, 0.3)';
+                                    }}
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" style={{ width: '18px', height: '18px' }} viewBox="0 0 20 20" fill="currentColor">
+                                        <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                                    </svg>
+                                    Reportar
+                                </button>
+
+                                <button
+                                    onClick={() => handleTripAction('end')}
+                                    disabled={isActionLoading}
+                                    style={{
+                                        width: '100%',
+                                        padding: '12px',
+                                        background: isActionLoading ? '#94a3b8' : '#dc2626',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '10px',
+                                        fontSize: '14px',
+                                        fontWeight: '700',
+                                        cursor: isActionLoading ? 'not-allowed' : 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '8px',
+                                        transition: 'all 0.3s'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        if (!isActionLoading) e.target.style.background = '#b91c1c';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        if (!isActionLoading) e.target.style.background = '#dc2626';
+                                    }}
+                                >
+                                    {isActionLoading ? (
+                                        <>
+                                            <div style={{
+                                                width: '18px',
+                                                height: '18px',
+                                                border: '3px solid rgba(255,255,255,0.3)',
+                                                borderTop: '3px solid white',
+                                                borderRadius: '50%',
+                                                animation: 'spin 1s linear infinite'
+                                            }}></div>
+                                            Finalizando...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <svg xmlns="http://www.w3.org/2000/svg" style={{ width: '18px', height: '18px' }} viewBox="0 0 20 20" fill="currentColor">
+                                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clipRule="evenodd" />
+                                            </svg>
+                                            Finalizar
+                                        </>
+                                    )}
+                                </button>
+                        </div>
+
+                        {/* Botones adicionales: Historial y Devoluciones */}
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '16px' }}>
                                 <button
                                     onClick={() => {
@@ -1002,6 +1212,132 @@ function DriverDashboard() {
                                 </button>
                         </div>
 
+                        {/* Transaction History */}
+                        <div style={{
+                            background: 'white',
+                            borderRadius: '16px',
+                            padding: '24px',
+                            boxShadow: '0 10px 30px rgba(0,0,0,0.1)'
+                        }}>
+                            <h3 style={{
+                                color: '#1e293b',
+                                fontSize: '18px',
+                                fontWeight: '700',
+                                margin: '0 0 20px 0',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '10px'
+                            }}>
+                                <svg xmlns="http://www.w3.org/2000/svg" style={{ width: '24px', height: '24px', color: '#3b82f6' }} viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                                    <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" />
+                                </svg>
+                                Historial de Cobros
+                            </h3>
+
+                            {transactions.length > 0 ? (
+                                <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                                    {transactions.slice(0, 8).map((tx, index) => (
+                                        <div
+                                            key={tx.id}
+                                            style={{
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                                padding: '16px',
+                                                borderBottom: index < transactions.length - 1 ? '1px solid #e5e7eb' : 'none',
+                                                transition: 'background 0.2s'
+                                            }}
+                                            onMouseEnter={(e) => e.currentTarget.style.background = '#f9fafb'}
+                                            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                        >
+                                            <div style={{ flex: 1 }}>
+                                                <p style={{
+                                                    color: '#1e293b',
+                                                    fontSize: '15px',
+                                                    fontWeight: '600',
+                                                    margin: '0 0 4px 0',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '8px'
+                                                }}>
+                                                    {tx.type === 'refund' ? (
+                                                        <svg xmlns="http://www.w3.org/2000/svg" style={{ width: '16px', height: '16px', color: '#dc2626' }} viewBox="0 0 20 20" fill="currentColor">
+                                                            <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
+                                                        </svg>
+                                                    ) : (
+                                                        <svg xmlns="http://www.w3.org/2000/svg" style={{ width: '16px', height: '16px', color: '#3b82f6' }} viewBox="0 0 20 20" fill="currentColor">
+                                                            <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                                                        </svg>
+                                                    )}
+                                                    {tx.type === 'refund' ? 'Devolución - ' : ''}{tx.passenger_name || 'Cliente'}
+                                                </p>
+                                                <p style={{
+                                                    color: '#6b7280',
+                                                    fontSize: '12px',
+                                                    margin: '0 0 2px 0'
+                                                }}>
+                                                    {tx.description}
+                                                </p>
+                                                <p style={{
+                                                    color: '#6b7280',
+                                                    fontSize: '12px',
+                                                    margin: 0
+                                                }}>
+                                                    {new Date(tx.created_at).toLocaleString('es-BO')}
+                                                </p>
+                                            </div>
+                                            <div style={{
+                                                background: tx.type === 'refund' ? '#fee2e2' : (tx.type === 'refund_reversal' ? '#fff7ed' : '#ecfdf5'),
+                                                padding: '8px 16px',
+                                                borderRadius: '8px',
+                                                border: tx.type === 'refund' ? '1px solid #fca5a5' : (tx.type === 'refund_reversal' ? '1px solid #fed7aa' : '1px solid #86efac')
+                                            }}>
+                                                <p style={{
+                                                    color: tx.type === 'refund' ? '#dc2626' : (tx.type === 'refund_reversal' ? '#f97316' : '#16a34a'),
+                                                    fontSize: '17px',
+                                                    fontWeight: '700',
+                                                    margin: 0
+                                                }}>
+                                                    {(() => {
+                                                        const amount = parseFloat(tx.amount);
+                                                        const isFare = tx.type === 'fare';
+                                                        const isRefund = tx.type === 'refund';
+                                                        const isReversal = tx.type === 'refund_reversal';
+
+                                                        // Para choferes:
+                                                        // - fare: positivo (ingreso)
+                                                        // - refund: negativo (descuento)
+                                                        // - refund_reversal: positivo (recuperación)
+
+                                                        if (isFare || isReversal) {
+                                                            return `+${Math.abs(amount).toFixed(2)} Bs`;
+                                                        } else if (isRefund) {
+                                                            return `-${Math.abs(amount).toFixed(2)} Bs`;
+                                                        } else {
+                                                            return `${amount.toFixed(2)} Bs`;
+                                                        }
+                                                    })()}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div style={{
+                                    textAlign: 'center',
+                                    padding: '40px 20px',
+                                    color: '#9ca3af'
+                                }}>
+                                    <svg xmlns="http://www.w3.org/2000/svg" style={{ width: '48px', height: '48px', margin: '0 auto 12px', opacity: 0.5 }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                    <p style={{ fontSize: '15px' }}>No hay cobros registrados en este viaje.</p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Sistema de Devoluciones */}
                         <div style={{
                             background: 'white',
                             borderRadius: '16px',
@@ -1069,6 +1405,8 @@ function DriverDashboard() {
 
                             {showRefundSection && (
                                 <>
+                                    {/* Búsqueda de transacciones */}
+                                    {/* Lista de solicitudes de devolución desde pasajeros */}
                                     <div>
                                         <h4 style={{
                                             color: '#1e293b',
@@ -1206,6 +1544,144 @@ function DriverDashboard() {
                 )}
             </div>
 
+            {/* Modal de Reporte al Finalizar Viaje o Registrar Incidente */}
+            {showReportModal && (
+                <div style={{
+                    position: 'fixed',
+                    inset: 0,
+                    background: 'rgba(0,0,0,0.5)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1000,
+                    padding: '20px'
+                }}>
+                    <div style={{
+                        background: 'white',
+                        borderRadius: '16px',
+                        padding: '24px',
+                        maxWidth: '500px',
+                        width: '100%',
+                        boxShadow: '0 20px 50px rgba(0,0,0,0.3)'
+                    }}>
+                        <h3 style={{
+                            color: '#1e293b',
+                            fontSize: '20px',
+                            fontWeight: '700',
+                            marginBottom: '16px'
+                        }}>
+                            {isFinalizingTrip ? 'Finalizar Viaje' : 'Registrar Incidente / Reporte'}
+                        </h3>
+
+                        <div style={{ marginBottom: '20px' }}>
+                            <label style={{
+                                display: 'block',
+                                color: '#475569',
+                                fontSize: '14px',
+                                fontWeight: '600',
+                                marginBottom: '8px'
+                            }}>
+                                {isFinalizingTrip ? 'Reporte del Viaje (Opcional)' : 'Descripción del Incidente'}
+                            </label>
+                            <textarea
+                                value={tripReport}
+                                onChange={(e) => setTripReport(e.target.value)}
+                                placeholder={
+                                    isFinalizingTrip
+                                        ? "Registra incidentes, accidentes o novedades del viaje. Si no hubo novedades, deja vacío."
+                                        : "Describe el incidente ocurrido durante el viaje (accidente, problema mecánico, altercado, etc.)"
+                                }
+                                rows="3"
+                                style={{
+                                    width: '100%',
+                                    padding: '12px',
+                                    border: '2px solid #e2e8f0',
+                                    borderRadius: '10px',
+                                    fontSize: '14px',
+                                    resize: 'vertical',
+                                    minHeight: '80px',
+                                    maxHeight: '150px',
+                                    boxSizing: 'border-box'
+                                }}
+                            />
+                            <p style={{
+                                margin: '8px 0 0 0',
+                                color: '#6b7280',
+                                fontSize: '12px'
+                            }}>
+                                {isFinalizingTrip
+                                    ? 'Si dejas vacío, se registrará como "Viaje concluido sin novedades"'
+                                    : 'Este reporte se agregará al historial del viaje con fecha y hora'
+                                }
+                            </p>
+                        </div>
+
+                        <div style={{ marginBottom: '20px' }}>
+                            <label style={{
+                                display: 'block',
+                                color: '#475569',
+                                fontSize: '14px',
+                                fontWeight: '600',
+                                marginBottom: '8px'
+                            }}>
+                                Foto del Incidente (Opcional)
+                            </label>
+                            <CameraButton
+                                onPhotoTaken={setTripReportPhoto}
+                                label="Tomar Foto del Incidente"
+                                disabled={false}
+                            />
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                            <button
+                                onClick={() => {
+                                    setShowReportModal(false);
+                                    setTripReport('');
+                                    setTripReportPhoto(null);
+                                    setIsFinalizingTrip(false);
+                                }}
+                                style={{
+                                    flex: 1,
+                                    padding: '14px',
+                                    background: '#6b7280',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '10px',
+                                    fontSize: '16px',
+                                    fontWeight: '600',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={isFinalizingTrip ? handleEndTripWithReport : handleSaveReport}
+                                disabled={isActionLoading}
+                                style={{
+                                    flex: 1,
+                                    padding: '14px',
+                                    background: isActionLoading ? '#94a3b8' : (isFinalizingTrip ? '#dc2626' : '#f59e0b'),
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '10px',
+                                    fontSize: '16px',
+                                    fontWeight: '600',
+                                    cursor: isActionLoading ? 'not-allowed' : 'pointer'
+                                }}
+                            >
+                                {isActionLoading
+                                    ? (isFinalizingTrip ? 'Finalizando...' : 'Guardando...')
+                                    : (isFinalizingTrip ? 'Finalizar Viaje' : 'Guardar Reporte')
+                                }
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+
+            {/* Notification Toast */}
             {notification && (
                 <div style={{
                     position: 'fixed',
@@ -1298,6 +1774,34 @@ function DriverDashboard() {
                 </div>
             )}
 
+            {/* Modal de Historial Completo de Transacciones */}
+            {showAllTransactions && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    background: 'rgba(0,0,0,0.7)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1000,
+                    padding: '20px',
+                    backdropFilter: 'blur(4px)'
+                }}>
+                    <div style={{
+                        background: 'white',
+                        padding: '30px',
+                        borderRadius: '20px',
+                        maxWidth: '1000px',
+                        width: '100%',
+                        maxHeight: '90vh',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+                    }}>
+                        {/* Header */}
                         <div style={{
                             display: 'flex',
                             justifyContent: 'space-between',
@@ -1367,6 +1871,14 @@ function DriverDashboard() {
                             </button>
                         </div>
 
+                        {/* Buscador y Filtros */}
+                        <div style={{
+                            display: 'flex',
+                            gap: '12px',
+                            marginBottom: '20px',
+                            flexWrap: 'wrap'
+                        }}>
+                            {/* Buscador */}
                             <div style={{ flex: '1 1 300px', position: 'relative' }}>
                                 <input
                                     type="text"
@@ -1399,6 +1911,60 @@ function DriverDashboard() {
                                 </svg>
                             </div>
 
+                            {/* Filtros por tipo */}
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <button
+                                    onClick={() => setFilterType('all')}
+                                    style={{
+                                        padding: '10px 20px',
+                                        background: filterType === 'all' ? 'linear-gradient(135deg, #3b82f6, #2563eb)' : '#f1f5f9',
+                                        color: filterType === 'all' ? 'white' : '#64748b',
+                                        border: 'none',
+                                        borderRadius: '8px',
+                                        fontSize: '13px',
+                                        fontWeight: '600',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.3s'
+                                    }}
+                                >
+                                    Todos
+                                </button>
+                                <button
+                                    onClick={() => setFilterType('fare')}
+                                    style={{
+                                        padding: '10px 20px',
+                                        background: filterType === 'fare' ? 'linear-gradient(135deg, #10b981, #059669)' : '#f1f5f9',
+                                        color: filterType === 'fare' ? 'white' : '#64748b',
+                                        border: 'none',
+                                        borderRadius: '8px',
+                                        fontSize: '13px',
+                                        fontWeight: '600',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.3s'
+                                    }}
+                                >
+                                    Cobros
+                                </button>
+                                <button
+                                    onClick={() => setFilterType('refund')}
+                                    style={{
+                                        padding: '10px 20px',
+                                        background: filterType === 'refund' ? 'linear-gradient(135deg, #ef4444, #dc2626)' : '#f1f5f9',
+                                        color: filterType === 'refund' ? 'white' : '#64748b',
+                                        border: 'none',
+                                        borderRadius: '8px',
+                                        fontSize: '13px',
+                                        fontWeight: '600',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.3s'
+                                    }}
+                                >
+                                    Devoluciones
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Lista de Transacciones */}
                         {loadingAllTransactions ? (
                             <div style={{
                                 textAlign: 'center',
@@ -1421,10 +1987,12 @@ function DriverDashboard() {
                                 {(() => {
                                     let filtered = allTransactions;
 
+                                    // Filtrar por tipo
                                     if (filterType !== 'all') {
                                         filtered = filtered.filter(tx => tx.type === filterType);
                                     }
 
+                                    // Filtrar por búsqueda
                                     if (searchQuery.trim()) {
                                         filtered = filtered.filter(tx =>
                                             tx.passenger_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -1517,6 +2085,10 @@ function DriverDashboard() {
                                                         const isRefund = tx.type === 'refund';
                                                         const isReversal = tx.type === 'refund_reversal';
 
+                                                        // Para choferes:
+                                                        // - fare: positivo (ingreso)
+                                                        // - refund: negativo (descuento)
+                                                        // - refund_reversal: positivo (recuperación)
 
                                                         if (isFare || isReversal) {
                                                             return `+${Math.abs(amount).toFixed(2)} Bs`;
@@ -1537,6 +2109,20 @@ function DriverDashboard() {
                 </div>
             )}
 
+            {/* Fullscreen View: Historial Completo */}
+            {showFullHistoryView && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
+                    zIndex: 9999,
+                    overflowY: 'auto',
+                    padding: '20px'
+                }}>
+                    {/* Header */}
                     <div style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -1572,6 +2158,56 @@ function DriverDashboard() {
                         </button>
                     </div>
 
+                    {/* Content Card */}
+                    <div style={{
+                        background: 'white',
+                        borderRadius: '16px',
+                        padding: '20px',
+                        boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
+                    }}>
+                        {loadingAllTransactions ? (
+                            <div style={{
+                                display: 'flex',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                padding: '40px'
+                            }}>
+                                <div style={{
+                                    border: '4px solid #e2e8f0',
+                                    borderTop: '4px solid #06b6d4',
+                                    borderRadius: '50%',
+                                    width: '50px',
+                                    height: '50px',
+                                    animation: 'spin 1s linear infinite'
+                                }}></div>
+                            </div>
+                        ) : allTransactions.length === 0 ? (
+                            <div style={{
+                                textAlign: 'center',
+                                padding: '40px',
+                                color: '#94a3b8'
+                            }}>
+                                <p style={{ fontSize: '16px', margin: 0 }}>
+                                    No hay transacciones registradas en este viaje
+                                </p>
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                {allTransactions.map(tx => {
+                                    const isRefund = tx.type === 'refund' || tx.type === 'refund_reversal';
+                                    const isReversal = tx.type === 'refund_reversal';
+                                    const isDebit = tx.type === 'debit' || !isRefund;
+
+                                    return (
+                                        <div key={tx.id} style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            padding: '16px',
+                                            background: '#f8fafc',
+                                            borderRadius: '12px',
+                                            border: '1px solid #e2e8f0'
+                                        }}>
+                                            {/* Icon */}
                                             <div style={{
                                                 width: '44px',
                                                 height: '44px',
@@ -1594,6 +2230,34 @@ function DriverDashboard() {
                                                 </svg>
                                             </div>
 
+                                            {/* Info */}
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <p style={{
+                                                    fontSize: '15px',
+                                                    fontWeight: '600',
+                                                    color: '#1e293b',
+                                                    margin: '0 0 4px 0',
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis',
+                                                    whiteSpace: 'nowrap'
+                                                }}>
+                                                    {tx.description || (isReversal ? 'Reversión de devolución' : isRefund ? 'Devolución' : 'Pago de pasaje')}
+                                                </p>
+                                                <p style={{
+                                                    fontSize: '13px',
+                                                    color: '#64748b',
+                                                    margin: 0
+                                                }}>
+                                                    {new Date(tx.created_at).toLocaleString('es-BO', {
+                                                        day: '2-digit',
+                                                        month: 'short',
+                                                        hour: '2-digit',
+                                                        minute: '2-digit'
+                                                    })}
+                                                </p>
+                                            </div>
+
+                                            {/* Amount */}
                                             <div style={{ textAlign: 'right', marginLeft: '12px' }}>
                                                 <p style={{
                                                     color: isReversal ? '#f97316' : isRefund ? '#8b5cf6' : '#10b981',
@@ -1605,6 +2269,10 @@ function DriverDashboard() {
                                                         const amount = parseFloat(tx.amount);
                                                         const isFare = tx.type === 'fare';
 
+                                                        // Para choferes:
+                                                        // - fare: positivo (ingreso)
+                                                        // - refund: negativo (descuento)
+                                                        // - refund_reversal: positivo (recuperación)
 
                                                         if (isFare || isReversal) {
                                                             return `+${Math.abs(amount).toFixed(2)} Bs`;
@@ -1625,6 +2293,20 @@ function DriverDashboard() {
                 </div>
             )}
 
+            {/* Fullscreen View: Devoluciones */}
+            {showRefundsView && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'linear-gradient(135deg, #0e7490 0%, #06b6d4 100%)', // Cyan azulado como Historial
+                    zIndex: 9999,
+                    overflowY: 'auto',
+                    padding: '20px'
+                }}>
+                    {/* Header */}
                     <div style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -1664,6 +2346,49 @@ function DriverDashboard() {
                         </button>
                     </div>
 
+                    {/* Content Card */}
+                    <div style={{
+                        background: 'white',
+                        borderRadius: '16px',
+                        padding: '20px',
+                        boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
+                    }}>
+                        {loadingRefunds ? (
+                            <div style={{
+                                display: 'flex',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                padding: '40px'
+                            }}>
+                                <div style={{
+                                    border: '4px solid #e2e8f0',
+                                    borderTop: '4px solid #3b82f6',
+                                    borderRadius: '50%',
+                                    width: '50px',
+                                    height: '50px',
+                                    animation: 'spin 1s linear infinite'
+                                }}></div>
+                            </div>
+                        ) : completedRefunds.length === 0 ? (
+                            <div style={{
+                                textAlign: 'center',
+                                padding: '40px',
+                                color: '#94a3b8'
+                            }}>
+                                <p style={{ fontSize: '16px', margin: 0 }}>
+                                    No hay devoluciones completadas en este viaje
+                                </p>
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                {completedRefunds.map(refund => (
+                                    <div key={refund.id} style={{
+                                        padding: '16px',
+                                        background: refund.is_reversed ? '#fef3c7' : '#f8fafc',
+                                        borderRadius: '12px',
+                                        border: refund.is_reversed ? '2px solid #f59e0b' : '1px solid #e2e8f0'
+                                    }}>
+                                        {/* Refund Header */}
                                         <div style={{
                                             display: 'flex',
                                             justifyContent: 'space-between',
@@ -1702,6 +2427,31 @@ function DriverDashboard() {
                                             </p>
                                         </div>
 
+                                        {/* Refund Details */}
+                                        <div style={{
+                                            background: 'white',
+                                            borderRadius: '8px',
+                                            padding: '12px',
+                                            marginBottom: refund.is_reversed ? '12px' : '0'
+                                        }}>
+                                            <p style={{
+                                                fontSize: '13px',
+                                                color: '#64748b',
+                                                margin: '0 0 6px 0',
+                                                fontWeight: '600'
+                                            }}>
+                                                Motivo:
+                                            </p>
+                                            <p style={{
+                                                fontSize: '14px',
+                                                color: '#1e293b',
+                                                margin: 0
+                                            }}>
+                                                {refund.reason || 'Sin motivo especificado'}
+                                            </p>
+                                        </div>
+
+                                        {/* Reversed Info */}
                                         {refund.is_reversed && (
                                             <div style={{
                                                 background: '#fff7ed',
@@ -1741,6 +2491,39 @@ function DriverDashboard() {
                                             </div>
                                         )}
 
+                                        {/* Reverse Button */}
+                                        {!refund.is_reversed && (
+                                            <button
+                                                onClick={() => setSelectedRefundForReversal(refund)}
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '12px',
+                                                    background: 'linear-gradient(135deg, #f97316, #ea580c)',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    borderRadius: '8px',
+                                                    fontSize: '15px',
+                                                    fontWeight: '600',
+                                                    cursor: 'pointer',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    gap: '8px'
+                                                }}
+                                            >
+                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                    <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+                                                </svg>
+                                                Revertir Devolución
+                                            </button>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Reversal Confirmation Modal */}
                     {selectedRefundForReversal && (
                         <div style={{
                             position: 'fixed',
@@ -1772,6 +2555,35 @@ function DriverDashboard() {
                                     Revertir Devolución
                                 </h3>
 
+                                {/* Refund Details */}
+                                <div style={{
+                                    background: '#f8fafc',
+                                    borderRadius: '12px',
+                                    padding: '16px',
+                                    marginBottom: '16px'
+                                }}>
+                                    <div style={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        marginBottom: '8px'
+                                    }}>
+                                        <span style={{ fontSize: '14px', color: '#64748b' }}>Pasajero:</span>
+                                        <span style={{ fontSize: '14px', fontWeight: '600', color: '#1e293b' }}>
+                                            {selectedRefundForReversal.passenger?.name}
+                                        </span>
+                                    </div>
+                                    <div style={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between'
+                                    }}>
+                                        <span style={{ fontSize: '14px', color: '#64748b' }}>Monto:</span>
+                                        <span style={{ fontSize: '16px', fontWeight: '700', color: '#f97316' }}>
+                                            {parseFloat(selectedRefundForReversal.amount).toFixed(2)} Bs
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Reversal Reason Input */}
                                 <div style={{ marginBottom: '20px' }}>
                                     <label style={{
                                         display: 'block',
@@ -1808,216 +2620,56 @@ function DriverDashboard() {
                                     </p>
                                 </div>
 
-            {showStartTurnoModal && (
-                <div style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: 'rgba(0,0,0,0.7)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    zIndex: 1000,
-                    padding: '20px'
-                }}>
-                    <div style={{
-                        background: 'white',
-                        borderRadius: '16px',
-                        padding: '30px',
-                        maxWidth: '500px',
-                        width: '100%'
-                    }}>
-                        <h3 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>
-                            🚀 Iniciar Turno
-                        </h3>
-
-                        <label style={{ display: 'block', marginBottom: '10px', fontWeight: '600' }}>
-                            Selecciona un Bus:
-                        </label>
-                        <select
-                            value={selectedBusForTurno?.id || ''}
-                            onChange={(e) => {
-                                const bus = busesDisponibles.find(b => b.id === parseInt(e.target.value));
-                                setSelectedBusForTurno(bus);
-                            }}
-                            style={{
-                                width: '100%',
-                                padding: '12px',
-                                border: '2px solid #e2e8f0',
-                                borderRadius: '8px',
-                                marginBottom: '16px',
-                                fontSize: '15px'
-                            }}
-                        >
-                            <option value="">-- Selecciona un bus --</option>
-                            {busesDisponibles.map(bus => (
-                                <option key={bus.id} value={bus.id}>
-                                    {bus.plate} - {bus.ruta?.nombre || 'Sin ruta'}
-                                </option>
-                            ))}
-                        </select>
-
-                        <label style={{ display: 'block', marginBottom: '10px', fontWeight: '600' }}>
-                            Hora de Fin Programada:
-                        </label>
-                        <input
-                            type="time"
-                            value={horaFinProgramada}
-                            onChange={(e) => setHoraFinProgramada(e.target.value)}
-                            style={{
-                                width: '100%',
-                                padding: '12px',
-                                border: '2px solid #e2e8f0',
-                                borderRadius: '8px',
-                                marginBottom: '20px',
-                                fontSize: '15px'
-                            }}
-                        />
-
-                        <div style={{ display: 'flex', gap: '12px' }}>
-                            <button
-                                onClick={() => setShowStartTurnoModal(false)}
-                                style={{
-                                    flex: 1,
-                                    padding: '12px',
-                                    background: '#f3f4f6',
-                                    border: 'none',
-                                    borderRadius: '8px',
-                                    fontWeight: '600',
-                                    cursor: 'pointer'
-                                }}
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                onClick={handleIniciarTurno}
-                                disabled={!selectedBusForTurno || turnoLoading}
-                                style={{
-                                    flex: 1,
-                                    padding: '12px',
-                                    background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '8px',
-                                    fontWeight: '600',
-                                    cursor: 'pointer',
-                                    opacity: (!selectedBusForTurno || turnoLoading) ? 0.5 : 1
-                                }}
-                            >
-                                {turnoLoading ? 'Iniciando...' : 'Iniciar Turno'}
-                            </button>
+                                {/* Action Buttons */}
+                                <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: '1fr 1fr',
+                                    gap: '12px'
+                                }}>
+                                    <button
+                                        onClick={() => {
+                                            setSelectedRefundForReversal(null);
+                                            setReversalReason('');
+                                        }}
+                                        style={{
+                                            padding: '12px',
+                                            background: '#f1f5f9',
+                                            color: '#475569',
+                                            border: 'none',
+                                            borderRadius: '8px',
+                                            fontSize: '15px',
+                                            fontWeight: '600',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button
+                                        onClick={handleReverseRefund}
+                                        disabled={reversalReason.trim().length < 10}
+                                        style={{
+                                            padding: '12px',
+                                            background: reversalReason.trim().length < 10
+                                                ? '#cbd5e1'
+                                                : 'linear-gradient(135deg, #f97316, #ea580c)',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '8px',
+                                            fontSize: '15px',
+                                            fontWeight: '600',
+                                            cursor: reversalReason.trim().length < 10 ? 'not-allowed' : 'pointer'
+                                        }}
+                                    >
+                                        Confirmar Reversión
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
             )}
+        </div>
+    );
+}
 
-            {showStartTripModal && (
-                <div style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: 'rgba(0,0,0,0.7)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    zIndex: 1000,
-                    padding: '20px'
-                }}>
-                    <div style={{
-                        background: 'white',
-                        borderRadius: '16px',
-                        padding: '30px',
-                        maxWidth: '500px',
-                        width: '100%'
-                    }}>
-                        <h3 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>
-                            Iniciar Viaje {tipoViaje === 'ida' ? 'de IDA 🔵' : 'de VUELTA 🟢'}
-                        </h3>
-
-                        <label style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            marginBottom: '16px',
-                            padding: '12px',
-                            background: '#f3f4f6',
-                            borderRadius: '8px',
-                            cursor: 'pointer'
-                        }}>
-                            <input
-                                type="checkbox"
-                                checked={cambiarBus}
-                                onChange={(e) => setCambiarBus(e.target.checked)}
-                                style={{ width: '18px', height: '18px' }}
-                            />
-                            <span style={{ fontWeight: '600' }}>Cambiar de bus</span>
-                        </label>
-
-                        {cambiarBus && (
-                            <>
-                                <label style={{ display: 'block', marginBottom: '10px', fontWeight: '600' }}>
-                                    Nuevo Bus:
-                                </label>
-                                <select
-                                    value={nuevoBusId || ''}
-                                    onChange={(e) => setNuevoBusId(parseInt(e.target.value))}
-                                    style={{
-                                        width: '100%',
-                                        padding: '12px',
-                                        border: '2px solid #e2e8f0',
-                                        borderRadius: '8px',
-                                        marginBottom: '16px',
-                                        fontSize: '15px'
-                                    }}
-                                >
-                                    <option value="">-- Selecciona un bus --</option>
-                                    {busesDisponibles.map(bus => (
-                                        <option key={bus.id} value={bus.id}>
-                                            {bus.plate} - {bus.ruta?.nombre || 'Sin ruta'}
-                                        </option>
-                                    ))}
-                                </select>
-                            </>
-                        )}
-
-                        <div style={{ display: 'flex', gap: '12px' }}>
-                            <button
-                                onClick={() => { setShowStartTripModal(false); setCambiarBus(false); setNuevoBusId(null); }}
-                                style={{
-                                    flex: 1,
-                                    padding: '12px',
-                                    background: '#f3f4f6',
-                                    border: 'none',
-                                    borderRadius: '8px',
-                                    fontWeight: '600',
-                                    cursor: 'pointer'
-                                }}
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                onClick={handleIniciarViajeConTurno}
-                                disabled={isActionLoading || (cambiarBus && !nuevoBusId)}
-                                style={{
-                                    flex: 1,
-                                    padding: '12px',
-                                    background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '8px',
-                                    fontWeight: '600',
-                                    cursor: 'pointer',
-                                    opacity: (isActionLoading || (cambiarBus && !nuevoBusId)) ? 0.5 : 1
-                                }}
-                            >
-                                {isActionLoading ? 'Iniciando...' : 'Iniciar Viaje'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
+export default DriverDashboard;
