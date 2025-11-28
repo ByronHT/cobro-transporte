@@ -117,61 +117,102 @@ class DriverActionController extends Controller
 
     /**
      * Procesa un pago realizado por el chofer.
+     * Ahora calcula automáticamente la tarifa según el tipo de usuario.
      */
     public function processPayment(Request $request)
     {
         $request->validate([
             'card_id' => 'required|integer|exists:cards,id',
-            'amount' => 'required|numeric|min:0.01',
-            'trip_id' => 'required|integer|exists:trips,id', // Ensure trip is active
+            'trip_id' => 'required|integer|exists:trips,id',
         ]);
 
-        $card = Card::find($request->card_id);
+        // Obtener tarjeta con usuario
+        $card = Card::with('user')->find($request->card_id);
         if (!$card) {
             return response()->json(['message' => 'Tarjeta no encontrada.'], 404);
         }
 
-        if ($card->balance < $request->amount) {
-            return response()->json(['message' => 'Saldo insuficiente en la tarjeta.'], 400);
+        $user = $card->user;
+        if (!$user) {
+            return response()->json(['message' => 'Usuario no encontrado.'], 404);
         }
 
-        $trip = Trip::where('id', $request->trip_id)
-                    ->whereNull('fin') // Ensure it's an active trip
+        // Obtener viaje activo con ruta
+        $trip = Trip::with('ruta', 'driver')->where('id', $request->trip_id)
+                    ->whereNull('fin')
                     ->first();
 
         if (!$trip) {
-            return response()->json(['message' => 'Viaje activo no encontrado para esta transacción.'], 404);
+            return response()->json(['message' => 'Viaje activo no encontrado.'], 404);
         }
 
-        // Deduct amount from card
-        $card->balance -= $request->amount;
+        // CALCULAR TARIFA CORRECTA según tipo de usuario
+        $amount = $this->calculateFare($user, $trip->ruta);
+
+        // Validar saldo suficiente
+        if ($card->balance < $amount) {
+            return response()->json(['message' => 'Saldo insuficiente en la tarjeta.'], 400);
+        }
+
+        // Descontar de la tarjeta
+        $card->balance -= $amount;
         $card->save();
 
-        // Create transaction
+        // Crear transacción
         $transaction = Transaction::create([
             'trip_id' => $trip->id,
             'card_id' => $card->id,
             'driver_id' => $trip->driver_id,
             'bus_id' => $trip->bus_id,
             'ruta_id' => $trip->ruta_id,
-            'amount' => $request->amount,
-            'type' => 'fare', // Changed from 'debit' to 'fare' for passenger payment
-            'description' => 'Pago de pasaje',
+            'amount' => $amount,
+            'type' => 'fare',
+            'description' => "Pasaje - {$user->user_type}",
         ]);
 
-        // Update driver's balance (assuming driver is associated with the trip)
-        $driver = $trip->driver; // Get the driver from the trip
+        // Actualizar balance del chofer
+        $driver = $trip->driver;
         if ($driver) {
-            $driver->balance += $request->amount;
+            $driver->balance += $amount;
             $driver->save();
         }
 
+        // Crear evento de notificación
+        \App\Models\PaymentEvent::create([
+            'trip_id' => $trip->id,
+            'card_id' => $card->id,
+            'card_uid' => $card->uid,
+            'passenger_id' => $user->id,
+            'amount' => $amount,
+            'event_type' => 'payment',
+            'message' => "Cobro: {$amount} Bs ({$user->user_type})"
+        ]);
+
         return response()->json([
             'message' => 'Pago procesado exitosamente.',
+            'amount_charged' => $amount,
+            'user_type' => $user->user_type,
             'transaction' => $transaction,
             'card_new_balance' => $card->balance,
             'driver_new_balance' => $driver ? $driver->balance : null,
         ], 201);
+    }
+
+    /**
+     * Calcula la tarifa correcta según el tipo de usuario
+     * Todos los tipos especiales pagan 1.00 Bs
+     */
+    private function calculateFare($user, $ruta)
+    {
+        // Tipos con tarifa de 1.00 Bs
+        $discountedTypes = ['senior', 'minor', 'student_school', 'student_university'];
+
+        if (in_array($user->user_type, $discountedTypes)) {
+            return 1.00;
+        }
+
+        // Adulto regular paga tarifa base
+        return $ruta->tarifa_base ?? 2.30;
     }
 
     /**
