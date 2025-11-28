@@ -8,6 +8,7 @@ use App\Models\BusLocation;
 use App\Models\Bus;
 use App\Models\Trip;
 use App\Models\Ruta;
+use App\Models\TripWaypoint;
 
 class BusTrackingController extends Controller
 {
@@ -49,10 +50,23 @@ class BusTrackingController extends Controller
                 'recorded_at' => now()
             ]);
 
+            // Si hay un viaje activo, TAMBIÉN guardar en trip_waypoints
+            // Estos waypoints se usarán para auto-registrar la ruta al finalizar el primer viaje
+            if ($activeTrip) {
+                TripWaypoint::create([
+                    'trip_id' => $activeTrip->id,
+                    'latitude' => $request->latitude,
+                    'longitude' => $request->longitude,
+                    'speed' => $request->speed,
+                    'recorded_at' => now()
+                ]);
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => 'Ubicación actualizada',
-                'location' => $location
+                'location' => $location,
+                'waypoint_saved' => $activeTrip ? true : false
             ]);
 
         } catch (\Exception $e) {

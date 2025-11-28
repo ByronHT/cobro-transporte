@@ -9,6 +9,7 @@ use App\Models\Transaction;
 use App\Models\PaymentEvent;
 use App\Models\Turno;
 use App\Models\TripWaypoint;
+use App\Models\Ruta;
 use Illuminate\Support\Facades\DB;
 
 class TripController extends Controller
@@ -444,6 +445,27 @@ class TripController extends Controller
         }
 
         $trip->save();
+
+        // AUTO-REGISTRO DE RUTAS: Guardar waypoints en la ruta si es el PRIMER viaje
+        if (!empty($waypoints) && $trip->ruta_id) {
+            $ruta = Ruta::find($trip->ruta_id);
+
+            if ($ruta) {
+                // Si es viaje de IDA y aún no hay ruta IDA registrada
+                if ($trip->tipo_viaje === 'ida' && is_null($ruta->ruta_ida_waypoints)) {
+                    $ruta->ruta_ida_waypoints = $waypoints;
+                    $ruta->save();
+                    \Log::info("RUTA IDA AUTO-REGISTRADA para ruta_id: {$trip->ruta_id} con " . count($waypoints) . " waypoints");
+                }
+
+                // Si es viaje de VUELTA y aún no hay ruta VUELTA registrada
+                if ($trip->tipo_viaje === 'vuelta' && is_null($ruta->ruta_vuelta_waypoints)) {
+                    $ruta->ruta_vuelta_waypoints = $waypoints;
+                    $ruta->save();
+                    \Log::info("RUTA VUELTA AUTO-REGISTRADA para ruta_id: {$trip->ruta_id} con " . count($waypoints) . " waypoints");
+                }
+            }
+        }
 
         TripWaypoint::where('trip_id', $trip->id)->delete();
 
