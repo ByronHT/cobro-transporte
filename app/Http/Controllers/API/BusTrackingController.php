@@ -79,41 +79,39 @@ class BusTrackingController extends Controller
     }
 
     /**
-     * Obtener buses cercanos a una ubicación (para pasajeros)
-     * GET /api/passenger/nearby-buses?latitude=-17.7833&longitude=-63.1823&radius=2&ruta_id=5
+     * Obtener todos los buses activos de una línea (para pasajeros)
+     * GET /api/passenger/nearby-buses?ruta_id=5
      */
     public function getNearbyBuses(Request $request)
     {
         $request->validate([
-            'latitude' => 'required|numeric|between:-90,90',
-            'longitude' => 'required|numeric|between:-180,180',
-            'radius' => 'nullable|numeric|min:0.1|max:50', // Máximo 50km
-            'ruta_id' => 'nullable|integer|exists:rutas,id' // Filtrar por línea específica
+            'ruta_id' => 'required|integer|exists:rutas,id' // Línea es obligatoria
         ]);
 
-        $radiusKm = $request->get('radius', 20); // Default 20km (aumentado de 2km)
         $rutaId = $request->get('ruta_id');
 
         try {
-            // Buscar buses cercanos
-            $nearbyBuses = BusLocation::findNearby(
-                $request->latitude,
-                $request->longitude,
-                $radiusKm,
-                5 // Últimos 5 minutos
-            );
+            // Obtener solo la ubicación MÁS RECIENTE de cada bus activo
+            $latestLocationIds = BusLocation::selectRaw('MAX(id) as latest_id')
+                ->where('is_active', true)
+                ->where('recorded_at', '>=', now()->subMinutes(5)) // Últimos 5 minutos
+                ->groupBy('bus_id')
+                ->pluck('latest_id');
 
-            // Filtrar por línea si se especificó
-            if ($rutaId) {
-                $nearbyBuses = $nearbyBuses->filter(function ($location) use ($rutaId) {
-                    return $location->bus && $location->bus->ruta_id == $rutaId;
-                });
-            }
+            // Obtener las ubicaciones completas
+            $locations = BusLocation::whereIn('id', $latestLocationIds)
+                ->with(['bus.ruta', 'driver', 'trip'])
+                ->get();
+
+            // Filtrar por línea
+            $locations = $locations->filter(function ($location) use ($rutaId) {
+                return $location->bus && $location->bus->ruta_id == $rutaId;
+            });
 
             // Formatear respuesta
-            $buses = $nearbyBuses->map(function ($location) {
+            $buses = $locations->map(function ($location) {
                 $activeTrip = \App\Models\Trip::where('bus_id', $location->bus_id)
-                    ->whereNull('end_time')
+                    ->whereNull('fin')
                     ->first();
 
                 return [
@@ -128,8 +126,6 @@ class BusTrackingController extends Controller
                     'longitude' => (float) $location->longitude,
                     'speed' => $location->speed ? (float) $location->speed : null,
                     'heading' => $location->heading ? (float) $location->heading : null,
-                    'distance_km' => $location->distance_km,
-                    'distance_meters' => round($location->distance_km * 1000),
                     'last_update' => $location->recorded_at->diffForHumans(),
                     'last_update_timestamp' => $location->recorded_at->toIso8601String(),
                     'is_active' => $location->is_active,
@@ -141,18 +137,13 @@ class BusTrackingController extends Controller
             return response()->json([
                 'success' => true,
                 'count' => $buses->count(),
-                'radius_km' => $radiusKm,
-                'user_location' => [
-                    'latitude' => (float) $request->latitude,
-                    'longitude' => (float) $request->longitude
-                ],
                 'buses' => $buses->values()
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error al buscar buses cercanos',
+                'message' => 'Error al buscar buses activos',
                 'error' => $e->getMessage()
             ], 500);
         }

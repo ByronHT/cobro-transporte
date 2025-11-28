@@ -394,9 +394,8 @@ function PassengerDashboard() {
             const [busesResponse, routeResponse] = await Promise.all([
                 apiClient.get(`/api/passenger/nearby-buses`, {
                     params: {
-                        ruta_id: routeId,
-                        latitude: userLocation?.lat,
-                        longitude: userLocation?.lng
+                        ruta_id: routeId
+                        // Ya NO enviamos latitude/longitude - mostramos TODOS los buses activos
                     }
                 }),
                 apiClient.get(`/api/passenger/route-details/${routeId}`)
