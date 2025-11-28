@@ -1,6 +1,15 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { GoogleMap, useLoadScript, Marker, InfoWindow, Polyline } from '@react-google-maps/api';
-import { GOOGLE_MAPS_API_KEY } from '../config';
+import { GOOGLE_MAPS_API_KEY, API_BASE_URL } from '../config';
+
+// FIX: Iconos con URLs absolutas para Android WebView
+const ICON_BASE_URL = `${API_BASE_URL}/images/map-icons`;
+const ICONS = {
+    USER: `${ICON_BASE_URL}/user-3d.svg`,
+    BUS_IDA: `${ICON_BASE_URL}/bus-3d-ida.svg`,
+    BUS_VUELTA: `${ICON_BASE_URL}/bus-3d-vuelta.svg`,
+    BUS_SELECTED: `${ICON_BASE_URL}/bus-3d-selected.svg`
+};
 
 const containerStyle = {
     width: '100%',
@@ -185,9 +194,17 @@ function BusMapGoogle({
     }
 
     return (
-        <div style={{ height, width: '100%', position: 'relative', borderRadius: '8px', overflow: 'hidden' }}>
+        <div style={{
+            height,
+            width: '100%',
+            position: 'relative',
+            borderRadius: '8px',
+            overflow: 'hidden',
+            background: 'transparent', // FIX: Transparencia para Android
+            zIndex: 0 // FIX: z-index bajo para WebView
+        }}>
                 <GoogleMap
-                    mapContainerStyle={containerStyle}
+                    mapContainerStyle={{...containerStyle, background: 'transparent'}} // FIX: Transparencia
                     center={mapCenter}
                     zoom={zoom}
                     onLoad={onLoad}
@@ -201,7 +218,7 @@ function BusMapGoogle({
                                 position={userLocation}
                                 title="Tu ubicación"
                                 icon={{
-                                    url: '/images/map-icons/user-3d.svg',
+                                    url: ICONS.USER,
                                     scaledSize: new window.google.maps.Size(64, 64),
                                     anchor: new window.google.maps.Point(32, 58),
                                 }}
@@ -236,11 +253,11 @@ function BusMapGoogle({
                         const tipoViaje = bus.tipo_viaje || 'ida'; // Default a 'ida' si no existe
                         let iconUrl;
                         if (isSelected) {
-                            iconUrl = '/images/map-icons/bus-3d-selected.svg';
+                            iconUrl = ICONS.BUS_SELECTED;
                         } else {
                             iconUrl = tipoViaje === 'vuelta'
-                                ? '/images/map-icons/bus-3d-vuelta.svg'
-                                : '/images/map-icons/bus-3d-ida.svg';
+                                ? ICONS.BUS_VUELTA
+                                : ICONS.BUS_IDA;
                         }
 
                         return (

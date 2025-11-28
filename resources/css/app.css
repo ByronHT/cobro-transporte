@@ -28,6 +28,17 @@ body {
   overscroll-behavior: none;
 }
 
+/* FIX: Transparencia para Android WebView (Google Maps) */
+html, body {
+  background: transparent !important;
+}
+
+/* Asegurar que el contenido sea transparente en Capacitor */
+#app, #root, ion-app, ion-content {
+  --background: transparent !important;
+  background: transparent !important;
+}
+
 /* Permitir selección de texto en áreas específicas */
 input,
 textarea,
