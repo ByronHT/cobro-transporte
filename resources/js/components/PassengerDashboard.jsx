@@ -2222,22 +2222,21 @@ function PassengerDashboard() {
                                 }}></div>
                                 <p style={{ color: '#64748b', fontSize: '15px' }}>Obteniendo tu ubicación...</p>
                             </div>
-                        ) : userLocation && selectedRouteId ? (
+                        ) : selectedRouteId ? (
                             <>
-                                {/* Mapa real con Google Maps */}
+                                {/* Mapa real con Google Maps - YA NO depende de userLocation */}
                                 <BusMapGoogle
                                     buses={nearbyBuses}
-                                    userLocation={userLocation}
-                                    center={userLocation}
-                                    zoom={14}
-                                    userRadius={2000}
+                                    userLocation={userLocation} // Opcional - solo muestra marcador si existe
+                                    center={userLocation || { lat: -17.7833, lng: -63.1823 }} // Santa Cruz como fallback
+                                    zoom={13}
                                     onBusClick={(bus) => {
                                         setSelectedBus(bus);
                                         setShowBusModal(true);
                                     }}
                                     selectedBusId={selectedBus?.bus_id}
                                     height="100%"
-                                    showUserCircle={true}
+                                    showUserCircle={false} // Círculo de rango eliminado
                                     routeData={selectedRouteData}
                                 />
 

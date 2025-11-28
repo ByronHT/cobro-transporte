@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { GoogleMap, useLoadScript, Marker, Circle, InfoWindow, Polyline } from '@react-google-maps/api';
+import { GoogleMap, useLoadScript, Marker, InfoWindow, Polyline } from '@react-google-maps/api';
 import { GOOGLE_MAPS_API_KEY } from '../config';
 
 const containerStyle = {
@@ -208,20 +208,7 @@ function BusMapGoogle({
                                 zIndex={2000}
                             />
 
-                            {/* Círculo alrededor del usuario */}
-                            {showUserCircle && (
-                                <Circle
-                                    center={userLocation}
-                                    radius={userRadius}
-                                    options={{
-                                        strokeColor: '#10b981',
-                                        strokeOpacity: 0.8,
-                                        strokeWeight: 2,
-                                        fillColor: '#10b981',
-                                        fillOpacity: 0.15,
-                                    }}
-                                />
-                            )}
+                            {/* Círculo eliminado - ya no se muestra rango alrededor del usuario */}
                         </>
                     )}
 
