@@ -26,12 +26,12 @@
                         <p class="mt-1 text-xs text-gray-500">Primero selecciona el rol del usuario</p>
                     </div>
 
-                    <!-- PASO 2: TIPO DE USUARIO (Solo si es Pasajero) -->
+                    <!-- PASO 2: TIPO DE PASAJERO (Solo si es Pasajero) -->
                     <div id="passenger_type_section" style="display:none;">
-                        <label class="block text-sm font-medium text-gray-700">Tipo de Usuario *</label>
+                        <label class="block text-sm font-medium text-gray-700">Tipo de Pasajero *</label>
                         <select name="user_type" id="user_type"
                                 class="mt-1 w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                            <option value="">-- Seleccionar Tipo --</option>
+                            <option value="">-- Seleccionar Tipo de Pasajero --</option>
                             <option value="adult" {{ old('user_type') === 'adult' ? 'selected' : '' }}>Regular (adulto) - 2.30 Bs</option>
                             <option value="senior" {{ old('user_type') === 'senior' ? 'selected' : '' }}>Mayor de Edad - 1.00 Bs</option>
                             <option value="minor" {{ old('user_type') === 'minor' ? 'selected' : '' }}>Menor de Edad - 1.00 Bs</option>

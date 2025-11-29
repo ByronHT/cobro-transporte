@@ -42,7 +42,8 @@ class UserController extends Controller
             'login_code'=>'required|string|size:4|unique:users,login_code',
             'ci'=>'nullable|string|max:20',
             'birth_date'=>'nullable|date',
-            'user_type'=>'required|in:adult,senior,minor,student_school,student_university',
+            // user_type solo requerido si el rol es pasajero
+            'user_type'=>'required_if:role,passenger|nullable|in:adult,senior,minor,student_school,student_university',
             'school_name'=>'required_if:user_type,student_school|nullable|string|max:255',
             'university_name'=>'required_if:user_type,student_university|nullable|string|max:255',
             'university_year'=>'required_if:user_type,student_university|nullable|integer|min:1|max:7',
@@ -59,7 +60,8 @@ class UserController extends Controller
             'login_code'=>$request->login_code,
             'ci'=>$request->ci,
             'birth_date'=>$request->birth_date,
-            'user_type'=>$request->user_type,
+            // Solo guardar user_type si el rol es pasajero, sino guardar 'adult' por defecto
+            'user_type'=>$request->role === 'passenger' ? $request->user_type : 'adult',
             'school_name'=>$request->school_name,
             'university_name'=>$request->university_name,
             'university_year'=>$request->university_year,
