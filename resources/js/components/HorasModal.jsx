@@ -16,7 +16,7 @@ const HorasModal = ({ isOpen, onClose }) => {
         setError(null);
 
         try {
-            const token = localStorage.getItem('token');
+            const token = localStorage.getItem('driver_token');
             const response = await fetch('/api/driver/time-records/turno', {
                 headers: {
                     'Authorization': `Bearer ${token}`,

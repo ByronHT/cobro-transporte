@@ -77,7 +77,9 @@
       "Bash(cmd /c \"if exist android\\app\\src\\main\\assets\\public rmdir /S /Q android\\app\\src\\main\\assets\\public && echo Assets Android eliminados\")",
       "WebSearch",
       "Bash(cmd /c \"dir /B docs\\*.md\")",
-      "Bash(cmd /c \"dir /B resources\\js\\components\\*.jsx\")"
+      "Bash(cmd /c \"dir /B resources\\js\\components\\*.jsx\")",
+      "Bash(railway link)",
+      "Bash(echo \"Necesito que tú ejecutes estos comandos manualmente porque railway link requiere interacción:\n\n1. railway link\n2. Selecciona ''pretty-benevolence'' \n3. Luego ejecuta: railway ssh --project=6d66ed09-6e7e-4940-be24-038b2924c1e2 --environment=3c9777ae-e0e3-48fe-a244-1023c4f1bb2c --service=abdabc21-d272-4e72-82ec-7ef05f624387\n\nMientras tanto, voy a revisar el código para identificar el problema de las tarifas...\")"
     ],
     "deny": [],
     "ask": []
