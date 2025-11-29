@@ -45,7 +45,9 @@ class PaymentController extends Controller
             ], 400);
         }
 
-        $fare = $trip->bus->ruta->tarifa_base;
+        // CALCULAR TARIFA según tipo de usuario
+        $passenger = $card->passenger;
+        $fare = $this->calculateFare($passenger, $trip->bus->ruta);
         $driver = $trip->driver;
 
         // 3. Validar la tarjeta del pasajero - TARJETA NO REGISTRADA
@@ -191,5 +193,27 @@ class PaymentController extends Controller
                 'display_message' => 'Error del servidor'
             ], 500);
         }
+    }
+
+    /**
+     * Calcula la tarifa correcta según el tipo de usuario
+     * Todos los tipos especiales pagan 1.00 Bs
+     */
+    private function calculateFare($user, $ruta)
+    {
+        // Si el usuario no existe, cobrar tarifa normal
+        if (!$user) {
+            return $ruta->tarifa_base ?? 2.30;
+        }
+
+        // Tipos con tarifa de 1.00 Bs
+        $discountedTypes = ['senior', 'minor', 'student_school', 'student_university'];
+
+        if (in_array($user->user_type, $discountedTypes)) {
+            return 1.00;
+        }
+
+        // Adulto regular paga tarifa base
+        return $ruta->tarifa_base ?? 2.30;
     }
 }
