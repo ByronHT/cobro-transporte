@@ -13,6 +13,7 @@ use App\Http\Controllers\API\BusTrackingController;
 use App\Http\Controllers\API\ComplaintController;
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\TurnoController;
+use App\Http\Controllers\API\TimeRecordController;
 
 Route::post('/payment/process', [PaymentController::class, 'process']);
 Route::post('/cliente/login', [LoginController::class, 'loginCliente']);
@@ -77,6 +78,15 @@ Route::middleware('auth:sanctum')->group(function(){
 
     // Sistema de Tracking GPS - Rutas del Chofer
     Route::post('/driver/update-location', [BusTrackingController::class, 'updateLocation']);
+
+    // Sistema de Control de Horas - Rutas del Chofer
+    Route::get('/driver/time-records', [TimeRecordController::class, 'getRecords']);
+    Route::get('/driver/time-records/turno', [TimeRecordController::class, 'getTurnoRecords']);
+    Route::post('/driver/time-records/start-ida', [TimeRecordController::class, 'startTripIda']);
+    Route::post('/driver/time-records/end-ida', [TimeRecordController::class, 'endTripIda']);
+    Route::post('/driver/time-records/start-vuelta', [TimeRecordController::class, 'startTripVuelta']);
+    Route::post('/driver/time-records/end-vuelta', [TimeRecordController::class, 'endTripVuelta']);
+    Route::post('/driver/time-records/clear-today', [TimeRecordController::class, 'clearTodayRecords']);
 
     // Sistema de Tracking GPS - Rutas del Pasajero
     Route::get('/passenger/nearby-buses', [BusTrackingController::class, 'getNearbyBuses']);

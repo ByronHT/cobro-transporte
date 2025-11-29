@@ -72,7 +72,12 @@
       "Bash(cmd /c \"dir /B *.jpg *.png *.jpeg 2>nul\")",
       "Bash(find:*)",
       "Bash(cmd /c \"dir /B public\\images\\map-icons 2>nul\")",
-      "Bash(cmd /c dir publicimagesmap-icons)"
+      "Bash(cmd /c dir publicimagesmap-icons)",
+      "Bash(cmd /c \"if exist public\\build rmdir /S /Q public\\build && echo Build eliminado\")",
+      "Bash(cmd /c \"if exist android\\app\\src\\main\\assets\\public rmdir /S /Q android\\app\\src\\main\\assets\\public && echo Assets Android eliminados\")",
+      "WebSearch",
+      "Bash(cmd /c \"dir /B docs\\*.md\")",
+      "Bash(cmd /c \"dir /B resources\\js\\components\\*.jsx\")"
     ],
     "deny": [],
     "ask": []

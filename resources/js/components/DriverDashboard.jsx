@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import CameraButton from './CameraButton';
+import HorasModal from './HorasModal';
 import { API_BASE_URL, POLLING_INTERVAL } from '../config';
 import { useGPSTracking } from '../hooks/useGPSTracking';
 
@@ -75,6 +76,9 @@ function DriverDashboard() {
     const [searchQuery, setSearchQuery] = useState('');
     const [filterType, setFilterType] = useState('all'); // all, fare, refund
     const [showRefundSection, setShowRefundSection] = useState(false);
+
+    // Estados para modal de Horas
+    const [showHorasModal, setShowHorasModal] = useState(false);
 
     // Estados para nueva vista de Historial y Devoluciones
     const [showFullHistoryView, setShowFullHistoryView] = useState(false);
@@ -1344,6 +1348,42 @@ function DriverDashboard() {
                                     Devoluciones
                                 </button>
                         </div>
+
+                        {/* Botón de Horas - Ancho completo */}
+                        <button
+                            onClick={() => setShowHorasModal(true)}
+                            style={{
+                                width: '100%',
+                                padding: '14px',
+                                background: 'linear-gradient(135deg, #10b981, #059669)',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '10px',
+                                fontSize: '15px',
+                                fontWeight: '700',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '10px',
+                                transition: 'all 0.3s',
+                                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
+                                marginBottom: '16px'
+                            }}
+                            onMouseEnter={(e) => {
+                                e.target.style.transform = 'translateY(-2px)';
+                                e.target.style.boxShadow = '0 6px 16px rgba(16, 185, 129, 0.4)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.target.style.transform = 'translateY(0)';
+                                e.target.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.3)';
+                            }}
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" style={{ width: '20px', height: '20px' }} viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                            </svg>
+                            📅 Horas
+                        </button>
 
                         {/* Transaction History */}
                         <div style={{
@@ -3179,6 +3219,12 @@ function DriverDashboard() {
                     </div>
                 </div>
             )}
+
+            {/* Modal de Horas */}
+            <HorasModal
+                isOpen={showHorasModal}
+                onClose={() => setShowHorasModal(false)}
+            />
         </div>
     );
 }
