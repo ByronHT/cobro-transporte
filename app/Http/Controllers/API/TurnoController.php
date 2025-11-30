@@ -15,7 +15,7 @@ class TurnoController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'bus_id' => 'required|exists:buses,id',
-            'hora_fin_programada' => 'required|date_format:H:i'
+            'hora_fin_programada' => 'nullable|date_format:H:i:s'
         ]);
 
         if ($validator->fails()) {
@@ -48,7 +48,7 @@ class TurnoController extends Controller
             'driver_id' => $driver->id,
             'bus_inicial_id' => $request->bus_id,
             'fecha' => now()->toDateString(),
-            'hora_inicio' => now()->format('H:i'),
+            'hora_inicio' => now()->format('H:i:s'),
             'hora_fin_programada' => $request->hora_fin_programada,
             'status' => 'activo'
         ]);

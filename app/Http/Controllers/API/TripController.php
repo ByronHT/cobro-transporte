@@ -349,13 +349,13 @@ class TripController extends Controller
                       ->first();
 
         if (!$turno) {
-            // No hay turno activo, crearlo automáticamente asumiendo un turno de 8 horas
+            // No hay turno activo, crearlo automáticamente
             $turno = Turno::create([
                 'driver_id' => $driver->id,
                 'bus_inicial_id' => $request->bus_id,
                 'fecha' => now()->toDateString(),
                 'hora_inicio' => now()->format('H:i:s'),
-                'hora_fin_programada' => now()->addHours(8)->format('H:i:s'),
+                'hora_fin_programada' => null, // La columna ahora es nullable
                 'status' => 'activo'
             ]);
         }
