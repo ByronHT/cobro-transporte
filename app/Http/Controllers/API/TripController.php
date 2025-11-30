@@ -10,6 +10,7 @@ use App\Models\PaymentEvent;
 use App\Models\Turno;
 use App\Models\TripWaypoint;
 use App\Models\Ruta;
+use App\Http\Controllers\API\TimeRecordController;
 use Illuminate\Support\Facades\DB;
 
 class TripController extends Controller
@@ -384,6 +385,10 @@ class TripController extends Controller
             'nuevo_bus_id' => $request->nuevo_bus_id ?? null,
             'status' => 'en_curso'
         ]);
+
+        // Registrar el inicio del viaje en el sistema de control de horas
+        $timeRecordController = new TimeRecordController();
+        $timeRecordController->registerTripStart($trip);
 
         return response()->json([
             'message' => 'Viaje iniciado exitosamente',
