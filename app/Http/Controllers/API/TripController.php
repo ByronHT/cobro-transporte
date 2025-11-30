@@ -349,9 +349,15 @@ class TripController extends Controller
                       ->first();
 
         if (!$turno) {
-            return response()->json([
-                'error' => 'Debes iniciar un turno antes de comenzar un viaje'
-            ], 400);
+            // No hay turno activo, crearlo automáticamente asumiendo un turno de 8 horas
+            $turno = Turno::create([
+                'driver_id' => $driver->id,
+                'bus_inicial_id' => $request->bus_id,
+                'fecha' => now()->toDateString(),
+                'hora_inicio' => now()->format('H:i:s'),
+                'hora_fin_programada' => now()->addHours(8)->format('H:i:s'),
+                'status' => 'activo'
+            ]);
         }
 
         $activeTripForDriver = Trip::where('driver_id', $driver->id)->whereNull('fin')->first();
