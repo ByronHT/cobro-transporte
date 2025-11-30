@@ -1,0 +1,377 @@
+#include <ESP8266WiFi.h>
+#include <ESP8266HTTPClient.h>
+#include <WiFiClientSecure.h>
+#include <MFRC522.h>
+#include <SPI.h>
+#include <ArduinoJson.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+// --- CONFIGURACIÓN LCD ---
+LiquidCrystal_I2C lcd(0x27, 16, 2);  // LCD azul/blanco
+
+// --- CONFIGURACIÓN WIFI ---
+const char* ssid = "RED";
+const char* password = "Interflow";
+
+// Servidor Railway (HTTPS)
+const char* server_host = "cobro-transporte-production-dac4.up.railway.app";
+const int server_port = 443;
+
+// --- ID DEL BUS ---
+const int bus_id = 1;
+
+// --- PINES RFID ---
+#define SS_PIN  D8
+#define RST_PIN D3
+
+// --- ESTADOS ---
+enum DeviceState {
+    WAITING_FOR_COMMAND,
+    TRIP_ACTIVE
+};
+
+DeviceState currentState = WAITING_FOR_COMMAND;
+
+// --- VARIABLES ---
+MFRC522 rfid(SS_PIN, RST_PIN);
+WiFiClientSecure client;
+long active_trip_id = 0;
+long current_command_id = 0;
+unsigned long lastCommandCheck = 0;
+const long commandCheckInterval = 3000;
+
+// WiFi reconexión
+int wifiRetryCount = 0;
+const int maxWifiRetries = 30;
+
+// Función para mostrar mensajes en LCD (2 líneas)
+void lcdMessage(String l1, String l2 = "") {
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print(l1);
+    if (l2.length() > 0) {
+        lcd.setCursor(0, 1);
+        lcd.print(l2);
+    }
+}
+
+void setup() {
+    Serial.begin(115200);
+    delay(500);
+
+    // LCD iniciar
+    Wire.begin(D2, D1);
+    lcd.init();
+    lcd.backlight();
+
+    // MENSAJE INICIAL: "Bienvenido -- Conectando..."
+    lcdMessage("  Bienvenido", "Conectando...");
+
+    Serial.println("\n=== Sistema Interflow ===");
+    Serial.print("Bus ID: ");
+    Serial.println(bus_id);
+
+    // RFID
+    SPI.begin();
+    rfid.PCD_Init();
+    rfid.PCD_SetAntennaGain(rfid.RxGain_max);
+
+    // HTTPS sin certificado
+    client.setInsecure();
+
+    connectToWiFi();
+
+    lcdMessage("Bus #" + String(bus_id), "Sistema listo");
+    delay(2000);
+
+    lcdMessage("Esperando", "comandos...");
+    Serial.println(">>> Esperando inicio de viaje <<<");
+}
+
+void loop() {
+    // Verificar conexión WiFi
+    if (WiFi.status() != WL_CONNECTED) {
+        connectToWiFi();
+    }
+
+    // Polling de comandos cada 3 segundos
+    if (millis() - lastCommandCheck > commandCheckInterval) {
+        checkServerForCommands();
+        lastCommandCheck = millis();
+    }
+
+    // Procesar pagos si hay viaje activo
+    if (currentState == TRIP_ACTIVE) {
+        processPassengerPayment();
+    }
+
+    delay(50);
+}
+
+void connectToWiFi() {
+    Serial.print("Conectando a WiFi: ");
+    Serial.println(ssid);
+
+    lcdMessage("Conectando", "a WiFi...");
+
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(ssid, password);
+
+    wifiRetryCount = 0;
+    while (WiFi.status() != WL_CONNECTED && wifiRetryCount < maxWifiRetries) {
+        delay(500);
+        Serial.print(".");
+        wifiRetryCount++;
+    }
+
+    if (WiFi.status() == WL_CONNECTED) {
+        Serial.println("\nWiFi OK");
+        Serial.print("IP: ");
+        Serial.println(WiFi.localIP());
+
+        lcdMessage("WiFi conectado", WiFi.localIP().toString());
+        delay(2000);
+    } else {
+        // ERROR: No se puede conectar a WiFi
+        Serial.println("\nERROR: No se pudo conectar a WiFi");
+
+        lcdMessage("Error...", "Conectese a red");
+        delay(3000);
+
+        // Reintentar
+        ESP.restart();
+    }
+}
+
+void checkServerForCommands() {
+    if (WiFi.status() != WL_CONNECTED) return;
+
+    HTTPClient http;
+    String url = "https://" + String(server_host) + "/api/device/command/" + String(bus_id);
+
+    http.begin(client, url);
+    http.addHeader("Accept", "application/json");
+    http.setTimeout(10000); // 10 segundos timeout
+
+    int httpCode = http.GET();
+
+    if (httpCode == 200) {
+        String payload = http.getString();
+        StaticJsonDocument<512> doc;
+
+        if (deserializeJson(doc, payload) == DeserializationError::Ok) {
+            String command = doc["command"] | "none";
+
+            if (command == "start_trip") {
+                active_trip_id = doc["trip_id"] | 0;
+                current_command_id = doc["command_id"] | 0;
+
+                Serial.println("\n=== VIAJE INICIADO ===");
+                Serial.print("Trip ID: ");
+                Serial.println(active_trip_id);
+
+                lcdMessage("VIAJE INICIADO", "ID: " + String(active_trip_id));
+                delay(2000);
+
+                lcdMessage("Listo para", "cobrar");
+
+                currentState = TRIP_ACTIVE;
+                markCommandAsCompleted();
+            }
+            else if (command == "end_trip") {
+                currentState = WAITING_FOR_COMMAND;
+                active_trip_id = 0;
+                current_command_id = doc["command_id"];
+
+                Serial.println("\n=== VIAJE FINALIZADO ===");
+
+                lcdMessage("VIAJE", "FINALIZADO");
+                delay(2000);
+
+                lcdMessage("Esperando", "comandos...");
+
+                markCommandAsCompleted();
+            }
+        }
+    } else if (httpCode < 0) {
+        // ERROR: No se puede conectar con el servidor
+        Serial.print("Error de conexion: ");
+        Serial.println(http.errorToString(httpCode));
+
+        lcdMessage("Error...", "Reinicie equipo");
+        delay(3000);
+    }
+
+    http.end();
+}
+
+void processPassengerPayment() {
+    if (!rfid.PICC_IsNewCardPresent()) return;
+    if (!rfid.PICC_ReadCardSerial()) {
+        // ERROR: Error al leer tarjeta
+        Serial.println("Error leyendo tarjeta");
+
+        lcdMessage("Pago no valido", "Error leer tarj.");
+        delay(2000);
+
+        lcdMessage("Listo para", "cobrar");
+        return;
+    }
+
+    // Obtener UID de la tarjeta
+    String uid = "";
+    for (byte i = 0; i < rfid.uid.size; i++) {
+        uid += String(rfid.uid.uidByte[i] < 16 ? "0" : "");
+        uid += String(rfid.uid.uidByte[i], HEX);
+    }
+    uid.toUpperCase();
+
+    Serial.println("\n--- TARJETA DETECTADA ---");
+    Serial.print("UID: ");
+    Serial.println(uid);
+
+    lcdMessage("Procesando...", uid.substring(0, 16));
+    delay(500);
+
+    // Validar que hay viaje activo
+    if (active_trip_id == 0) {
+        Serial.println("ERROR: No hay viaje activo");
+
+        lcdMessage("Pago no valido", "No hay viaje");
+        delay(2000);
+
+        rfid.PICC_HaltA();
+        rfid.PCD_StopCrypto1();
+        return;
+    }
+
+    // Enviar solicitud de pago al servidor
+    HTTPClient http;
+    String url = "https://" + String(server_host) + "/api/payment/process";
+
+    http.begin(client, url);
+    http.addHeader("Content-Type", "application/json");
+    http.setTimeout(15000); // 15 segundos timeout
+
+    // Crear JSON con datos del pago
+    StaticJsonDocument<256> doc;
+    doc["uid"] = uid;
+    doc["trip_id"] = active_trip_id;
+
+    String body;
+    serializeJson(doc, body);
+
+    Serial.println("Enviando solicitud de pago...");
+
+    int httpCode = http.POST(body);
+
+    if (httpCode > 0) {
+        String payload = http.getString();
+        StaticJsonDocument<768> response;
+
+        if (deserializeJson(response, payload) == DeserializationError::Ok) {
+            String status = response["status"] | "unknown";
+
+            if (status == "success") {
+                // PAGO EXITOSO - Mostrar nombre del pasajero
+                String passengerName = response["passenger_name"] | "Pasajero";
+                String newBalance = response["new_balance"] | "0.00";
+
+                Serial.println("=== PAGO EXITOSO ===");
+                Serial.print("Pasajero: ");
+                Serial.println(passengerName);
+                Serial.print("Nuevo saldo: ");
+                Serial.print(newBalance);
+                Serial.println(" Bs");
+
+                // Primera línea: "Pago exitoso"
+                // Segunda línea: Nombre del pasajero (hasta 16 caracteres)
+                lcdMessage("Pago exitoso", passengerName.substring(0, 16));
+                delay(3000);
+
+                // Mostrar saldo nuevo
+                lcdMessage("Saldo:", newBalance + " Bs");
+                delay(2000);
+
+            } else {
+                // PAGO FALLIDO - Mostrar motivo específico
+                String message = response["message"] | "ERROR";
+                String displayMsg = response["display_message"] | "Error";
+
+                Serial.println("=== PAGO RECHAZADO ===");
+                Serial.print("Motivo: ");
+                Serial.println(message);
+
+                // Primera línea: "Pago no valido"
+                // Segunda línea: Motivo específico
+                String reason = "";
+
+                if (message == "SALDO_INSUFICIENTE") {
+                    reason = "Saldo insufi.";
+                } else if (message == "TARJETA_NO_ACTIVA") {
+                    reason = "Tarj. no activa";
+                } else if (message == "TARJETA_NO_REGISTRADA") {
+                    reason = "Tarj. no regist.";
+                } else if (message == "VIAJE_NO_ACTIVO") {
+                    reason = "No hay viaje";
+                } else {
+                    reason = displayMsg.substring(0, 16);
+                }
+
+                lcdMessage("Pago no valido", reason);
+                delay(3000);
+            }
+        } else {
+            // Error al parsear JSON
+            Serial.println("Error parseando respuesta JSON");
+
+            lcdMessage("Pago no valido", "Error servidor");
+            delay(2000);
+        }
+    } else {
+        // Error de conexión HTTP
+        Serial.print("Error HTTP: ");
+        Serial.println(httpCode);
+        Serial.println(http.errorToString(httpCode));
+
+        lcdMessage("Error...", "Reinicie equipo");
+        delay(3000);
+    }
+
+    http.end();
+
+    // Finalizar comunicación con tarjeta
+    rfid.PICC_HaltA();
+    rfid.PCD_StopCrypto1();
+
+    // Volver a pantalla de espera
+    lcdMessage("Listo para", "cobrar");
+
+    // Delay para evitar lecturas duplicadas
+    delay(2000);
+}
+
+void markCommandAsCompleted() {
+    if (current_command_id == 0) return;
+
+    HTTPClient http;
+    String url = "https://" + String(server_host) + "/api/device/command/" +
+                 String(current_command_id) + "/complete";
+
+    http.begin(client, url);
+    http.addHeader("Content-Type", "application/json");
+
+    int httpCode = http.POST("{}");
+
+    if (httpCode == 200) {
+        Serial.println("Comando marcado como completado");
+    } else {
+        Serial.print("Error marcando comando: ");
+        Serial.println(httpCode);
+    }
+
+    http.end();
+
+    current_command_id = 0;
+}

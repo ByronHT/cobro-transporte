@@ -90,15 +90,15 @@ function DriverDashboard() {
 
     const [showStartTurnoModal, setShowStartTurnoModal] = useState(false);
     const [showEndTurnoModal, setShowEndTurnoModal] = useState(false);
-    const [showStartTripModal, setShowStartTripModal] = useState(false);
+    // const [showStartTripModal, setShowStartTripModal] = useState(false); // Eliminado: Modal de inicio de viaje
     const [showEndTripModal, setShowEndTripModal] = useState(false);
     const [busesDisponibles, setBusesDisponibles] = useState([]);
     const [selectedBusForTurno, setSelectedBusForTurno] = useState(null);
     const [horaFinProgramada, setHoraFinProgramada] = useState('');
     const [turnoLoading, setTurnoLoading] = useState(false);
     const [tipoViaje, setTipoViaje] = useState('ida');
-    const [cambiarBus, setCambiarBus] = useState(false);
-    const [nuevoBusId, setNuevoBusId] = useState('');
+    // const [cambiarBus, setCambiarBus] = useState(false); // Eliminado: parte del modal de inicio de viaje
+    // const [nuevoBusId, setNuevoBusId] = useState(''); // Eliminado: parte del modal de inicio de viaje
     const [crearViajeVuelta, setCrearViajeVuelta] = useState(true);
     const [hasTripsToday, setHasTripsToday] = useState(false);
 
@@ -502,18 +502,25 @@ function DriverDashboard() {
     };
 
     const handleIniciarViajeConTurno = async () => {
+        if (!busId) {
+            showNotification({
+                type: 'error',
+                title: 'Error',
+                message: 'Por favor, selecciona un bus antes de iniciar un viaje.'
+            });
+            return;
+        }
+
         setIsActionLoading(true);
         try {
             const payload = {
-                bus_id: cambiarBus ? nuevoBusId : busId,
+                bus_id: busId,
                 tipo_viaje: tipoViaje
             };
 
-            await apiClient.post('/api/driver/request-trip-start', payload);
+            // Endpoint corregido para asociar el turno
+            await apiClient.post('/api/driver/trip/start-with-turno', payload);
 
-            setShowStartTripModal(false);
-            setCambiarBus(false);
-            setNuevoBusId('');
             await fetchDriverData();
             showNotification({
                 type: 'success',
@@ -1009,29 +1016,61 @@ function DriverDashboard() {
                                         </option>
                                     ))}
                                 </select>
+
+                                <label style={{
+                                    display: 'block',
+                                    color: '#1e293b',
+                                    fontSize: '14px',
+                                    fontWeight: '600',
+                                    marginBottom: '10px',
+                                    textAlign: 'left'
+                                }}>
+                                    Selecciona el Tipo de Viaje
+                                </label>
+                                <select
+                                    value={tipoViaje}
+                                    onChange={(e) => setTipoViaje(e.target.value)}
+                                    style={{
+                                        width: '100%',
+                                        padding: '14px',
+                                        border: '2px solid #e2e8f0',
+                                        borderRadius: '10px',
+                                        fontSize: '15px',
+                                        marginBottom: '20px',
+                                        background: 'white',
+                                        cursor: 'pointer',
+                                        outline: 'none',
+                                        transition: 'all 0.3s'
+                                    }}
+                                    onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                                    onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+                                >
+                                    <option value="ida">Ida</option>
+                                    <option value="vuelta">Vuelta</option>
+                                </select>
                             </>
                         ) : (
                             <p style={{ color: '#6b7280', marginBottom: '20px' }}>Cargando buses disponibles...</p>
                         )}
 
                         <button
-                            onClick={() => setShowStartTripModal(true)}
-                            disabled={!busId}
+                            onClick={handleIniciarViajeConTurno}
+                            disabled={!busId || isActionLoading}
                             style={{
                                 width: '100%',
                                 padding: '16px',
-                                background: (!busId) ? '#94a3b8' : 'linear-gradient(135deg, #22c55e, #16a34a)',
+                                background: (!busId || isActionLoading) ? '#94a3b8' : 'linear-gradient(135deg, #22c55e, #16a34a)',
                                 color: 'white',
                                 border: 'none',
                                 borderRadius: '12px',
                                 fontSize: '17px',
                                 fontWeight: '700',
-                                cursor: (!busId) ? 'not-allowed' : 'pointer',
+                                cursor: (!busId || isActionLoading) ? 'not-allowed' : 'pointer',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 gap: '10px',
-                                boxShadow: (!busId) ? 'none' : '0 6px 16px rgba(34, 197, 94, 0.4)',
+                                boxShadow: (!busId || isActionLoading) ? 'none' : '0 6px 16px rgba(34, 197, 94, 0.4)',
                                 transition: 'all 0.3s'
                             }}
                             onMouseEnter={(e) => {
@@ -1041,12 +1080,26 @@ function DriverDashboard() {
                                 if (busId && !isActionLoading) e.target.style.transform = 'translateY(0)';
                             }}
                         >
+                            {isActionLoading ? (
+                                <>
+                                    <div style={{
+                                        width: '20px',
+                                        height: '20px',
+                                        border: '3px solid rgba(255,255,255,0.3)',
+                                        borderTop: '3px solid white',
+                                        borderRadius: '50%',
+                                        animation: 'spin 1s linear infinite'
+                                    }}></div>
+                                    <span>Iniciando...</span>
+                                </>
+                            ) : (
                                 <>
                                     <svg xmlns="http://www.w3.org/2000/svg" style={{ width: '24px', height: '24px' }} viewBox="0 0 20 20" fill="currentColor">
                                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
                                     </svg>
                                     Iniciar Viaje
                                 </>
+                            )}
                         </button>
                     </div>
                 ) : (
@@ -3026,164 +3079,7 @@ function DriverDashboard() {
                 </div>
             )}
 
-            {showStartTripModal && (
-                <div style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: 'rgba(0,0,0,0.7)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    zIndex: 1000,
-                    padding: '20px'
-                }}>
-                    <div style={{
-                        background: 'white',
-                        borderRadius: '16px',
-                        padding: '30px',
-                        maxWidth: '500px',
-                        width: '100%'
-                    }}>
-                        <h3 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>
-                            Iniciar Viaje
-                        </h3>
 
-                        {/* Selector de Tipo de Viaje - Solo visible si no hay viajes hoy */}
-                        {!hasTripsToday ? (
-                            <div style={{ marginBottom: '20px' }}>
-                                <label style={{ display: 'block', marginBottom: '10px', fontWeight: '600' }}>
-                                    Tipo de Viaje:
-                                </label>
-                                <div style={{ display: 'flex', gap: '15px' }}>
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                                        <input
-                                            type="radio"
-                                            name="tipoViaje"
-                                            value="ida"
-                                            checked={tipoViaje === 'ida'}
-                                            onChange={() => setTipoViaje('ida')}
-                                            style={{ width: '18px', height: '18px' }}
-                                        />
-                                        <span style={{ fontWeight: '500' }}>IDA</span>
-                                    </label>
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                                        <input
-                                            type="radio"
-                                            name="tipoViaje"
-                                            value="vuelta"
-                                            checked={tipoViaje === 'vuelta'}
-                                            onChange={() => setTipoViaje('vuelta')}
-                                            style={{ width: '18px', height: '18px' }}
-                                        />
-                                        <span style={{ fontWeight: '500' }}>VUELTA</span>
-                                    </label>
-                                </div>
-                            </div>
-                        ) : (
-                            <div style={{
-                                background: '#e0f2fe', // Light blue background
-                                border: '1px solid #90cdf4', // Border color
-                                borderRadius: '8px',
-                                padding: '15px',
-                                marginBottom: '20px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '10px'
-                            }}>
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" style={{ width: '24px', height: '24px', color: '#3b82f6' }}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                <p style={{ margin: 0, fontSize: '14px', color: '#1e3a8a', fontWeight: '600' }}>
-                                    El tipo de viaje (IDA/VUELTA) se alternará automáticamente.
-                                </p>
-                            </div>
-                        )}
-
-                        <label style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            marginBottom: '16px',
-                            padding: '12px',
-                            background: '#f3f4f6',
-                            borderRadius: '8px',
-                            cursor: 'pointer'
-                        }}>
-                            <input
-                                type="checkbox"
-                                checked={cambiarBus}
-                                onChange={(e) => setCambiarBus(e.target.checked)}
-                                style={{ width: '18px', height: '18px' }}
-                            />
-                            <span style={{ fontWeight: '600' }}>Cambiar de bus</span>
-                        </label>
-
-                        {cambiarBus && (
-                            <>
-                                <label style={{ display: 'block', marginBottom: '10px', fontWeight: '600' }}>
-                                    Nuevo Bus:
-                                </label>
-                                <select
-                                    value={nuevoBusId || ''}
-                                    onChange={(e) => setNuevoBusId(parseInt(e.target.value))}
-                                    style={{
-                                        width: '100%',
-                                        padding: '12px',
-                                        border: '2px solid #e2e8f0',
-                                        borderRadius: '8px',
-                                        marginBottom: '16px',
-                                        fontSize: '15px'
-                                    }}
-                                >
-                                    <option value="">-- Selecciona un bus --</option>
-                                    {busesDisponibles.map(bus => (
-                                        <option key={bus.id} value={bus.id}>
-                                            {bus.plate} - {bus.ruta?.nombre || 'Sin ruta'}
-                                        </option>
-                                    ))}
-                                </select>
-                            </>
-                        )}
-
-                        <div style={{ display: 'flex', gap: '12px' }}>
-                            <button
-                                onClick={() => { setShowStartTripModal(false); setCambiarBus(false); setNuevoBusId(null); }}
-                                style={{
-                                    flex: 1,
-                                    padding: '12px',
-                                    background: '#f3f4f6',
-                                    border: 'none',
-                                    borderRadius: '8px',
-                                    fontWeight: '600',
-                                    cursor: 'pointer'
-                                }}
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                onClick={handleIniciarViajeConTurno}
-                                disabled={isActionLoading || (cambiarBus && !nuevoBusId)}
-                                style={{
-                                    flex: 1,
-                                    padding: '12px',
-                                    background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '8px',
-                                    fontWeight: '600',
-                                    cursor: 'pointer',
-                                    opacity: (isActionLoading || (cambiarBus && !nuevoBusId)) ? 0.5 : 1
-                                }}
-                            >
-                                {isActionLoading ? 'Iniciando...' : 'Iniciar Viaje'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {showEndTripModal && (
                 <div style={{
