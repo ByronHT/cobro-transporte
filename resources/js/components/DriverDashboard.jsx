@@ -100,6 +100,7 @@ function DriverDashboard() {
     const [cambiarBus, setCambiarBus] = useState(false);
     const [nuevoBusId, setNuevoBusId] = useState('');
     const [crearViajeVuelta, setCrearViajeVuelta] = useState(true);
+    const [hasTripsToday, setHasTripsToday] = useState(false);
 
     // 📍 Hook de tracking GPS optimizado
     const gpsTracking = useGPSTracking({
@@ -109,6 +110,17 @@ function DriverDashboard() {
         apiBaseUrl: API_BASE_URL
     });
 
+    const fetchDriverTimeRecords = async () => {
+        try {
+            const response = await apiClient.get('/api/driver/time-records/turno');
+            // Assuming this endpoint returns records for the current day
+            setHasTripsToday(response.data.length > 0);
+        } catch (err) {
+            console.error("Error fetching driver time records:", err);
+            setHasTripsToday(false);
+        }
+    };
+
     useEffect(() => {
         let intervalId;
         let isMounted = true;
@@ -116,6 +128,7 @@ function DriverDashboard() {
         const safeFetch = async () => {
             if (isMounted) {
                 await fetchDriverData();
+                await fetchDriverTimeRecords(); // Fetch time records as well
             }
         };
 
@@ -1002,23 +1015,23 @@ function DriverDashboard() {
                         )}
 
                         <button
-                            onClick={() => handleTripAction('start')}
-                            disabled={isActionLoading || !busId}
+                            onClick={() => setShowStartTripModal(true)}
+                            disabled={!busId}
                             style={{
                                 width: '100%',
                                 padding: '16px',
-                                background: (!busId || isActionLoading) ? '#94a3b8' : 'linear-gradient(135deg, #22c55e, #16a34a)',
+                                background: (!busId) ? '#94a3b8' : 'linear-gradient(135deg, #22c55e, #16a34a)',
                                 color: 'white',
                                 border: 'none',
                                 borderRadius: '12px',
                                 fontSize: '17px',
                                 fontWeight: '700',
-                                cursor: (!busId || isActionLoading) ? 'not-allowed' : 'pointer',
+                                cursor: (!busId) ? 'not-allowed' : 'pointer',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 gap: '10px',
-                                boxShadow: (!busId || isActionLoading) ? 'none' : '0 6px 16px rgba(34, 197, 94, 0.4)',
+                                boxShadow: (!busId) ? 'none' : '0 6px 16px rgba(34, 197, 94, 0.4)',
                                 transition: 'all 0.3s'
                             }}
                             onMouseEnter={(e) => {
@@ -1028,26 +1041,12 @@ function DriverDashboard() {
                                 if (busId && !isActionLoading) e.target.style.transform = 'translateY(0)';
                             }}
                         >
-                            {isActionLoading ? (
-                                <>
-                                    <div style={{
-                                        width: '20px',
-                                        height: '20px',
-                                        border: '3px solid rgba(255,255,255,0.3)',
-                                        borderTop: '3px solid white',
-                                        borderRadius: '50%',
-                                        animation: 'spin 1s linear infinite'
-                                    }}></div>
-                                    Iniciando...
-                                </>
-                            ) : (
                                 <>
                                     <svg xmlns="http://www.w3.org/2000/svg" style={{ width: '24px', height: '24px' }} viewBox="0 0 20 20" fill="currentColor">
                                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
                                     </svg>
                                     Iniciar Viaje
                                 </>
-                            )}
                         </button>
                     </div>
                 ) : (
@@ -3049,8 +3048,59 @@ function DriverDashboard() {
                         width: '100%'
                     }}>
                         <h3 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>
-                            Iniciar Viaje {tipoViaje === 'ida' ? 'de IDA' : 'de VUELTA'}
+                            Iniciar Viaje
                         </h3>
+
+                        {/* Selector de Tipo de Viaje - Solo visible si no hay viajes hoy */}
+                        {!hasTripsToday ? (
+                            <div style={{ marginBottom: '20px' }}>
+                                <label style={{ display: 'block', marginBottom: '10px', fontWeight: '600' }}>
+                                    Tipo de Viaje:
+                                </label>
+                                <div style={{ display: 'flex', gap: '15px' }}>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                                        <input
+                                            type="radio"
+                                            name="tipoViaje"
+                                            value="ida"
+                                            checked={tipoViaje === 'ida'}
+                                            onChange={() => setTipoViaje('ida')}
+                                            style={{ width: '18px', height: '18px' }}
+                                        />
+                                        <span style={{ fontWeight: '500' }}>IDA</span>
+                                    </label>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                                        <input
+                                            type="radio"
+                                            name="tipoViaje"
+                                            value="vuelta"
+                                            checked={tipoViaje === 'vuelta'}
+                                            onChange={() => setTipoViaje('vuelta')}
+                                            style={{ width: '18px', height: '18px' }}
+                                        />
+                                        <span style={{ fontWeight: '500' }}>VUELTA</span>
+                                    </label>
+                                </div>
+                            </div>
+                        ) : (
+                            <div style={{
+                                background: '#e0f2fe', // Light blue background
+                                border: '1px solid #90cdf4', // Border color
+                                borderRadius: '8px',
+                                padding: '15px',
+                                marginBottom: '20px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '10px'
+                            }}>
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" style={{ width: '24px', height: '24px', color: '#3b82f6' }}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <p style={{ margin: 0, fontSize: '14px', color: '#1e3a8a', fontWeight: '600' }}>
+                                    El tipo de viaje (IDA/VUELTA) se alternará automáticamente.
+                                </p>
+                            </div>
+                        )}
 
                         <label style={{
                             display: 'flex',

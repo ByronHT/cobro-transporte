@@ -10,6 +10,7 @@ use App\Models\Transaction;
 use App\Models\Trip;
 use App\Models\Card;
 use App\Models\User;
+use App\Http\Controllers\API\TimeRecordController;
 use Illuminate\Support\Facades\DB;
 
 class DriverActionController extends Controller
@@ -21,7 +22,8 @@ class DriverActionController extends Controller
     public function requestTripStart(Request $request)
     {
         $request->validate([
-            'bus_id' => 'required|integer|exists:buses,id'
+            'bus_id' => 'required|integer|exists:buses,id',
+            'tipo_viaje' => 'nullable|string|in:ida,vuelta'
         ]);
 
         $driver = $request->user();
@@ -49,7 +51,12 @@ class DriverActionController extends Controller
             'bus_id' => $busId,
             'driver_id' => $driver->id,
             'inicio' => now(),
+            'tipo_viaje' => $request->tipo_viaje,
         ]);
+
+        // Registrar el inicio del viaje en el TimeRecordController
+        $timeRecordController = new TimeRecordController();
+        $timeRecordController->registerTripStart($trip);
 
         // Crear el comando en la base de datos
         BusCommand::create([
@@ -99,6 +106,10 @@ class DriverActionController extends Controller
         }
 
         $activeTrip->save();
+
+        // Registrar el fin del viaje en el TimeRecordController
+        $timeRecordController = new TimeRecordController();
+        $timeRecordController->registerTripEnd($activeTrip);
 
         // Crear el comando para que el Arduino también se entere
         $command = BusCommand::create([
