@@ -9,6 +9,8 @@ class TimeRecord extends Model
 {
     use HasFactory;
 
+    protected $table = 'driver_time_records';
+
     protected $fillable = [
         'driver_id',
         'turno_id',

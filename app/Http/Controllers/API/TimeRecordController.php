@@ -367,7 +367,7 @@ class TimeRecordController extends Controller
         $records = TimeRecord::where('driver_id', $driver->id)
             ->whereDate('created_at', today())
             ->where('es_ultimo_viaje', false)
-            ->with(['tripIda', 'tripVuelta'])
+            ->with(['tripIda.bus', 'tripIda.ruta', 'tripVuelta.bus', 'tripVuelta.ruta'])
             ->orderBy('created_at', 'asc')
             ->get();
 
