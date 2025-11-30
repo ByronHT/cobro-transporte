@@ -193,7 +193,7 @@ class TimeRecordController extends Controller
         // Asumiendo que hay un modelo Turno y que tiene un estado 'activo' o similar
         // y que está asociado a un chofer_id
         return \App\Models\Turno::where('driver_id', $driverId)
-            ->where('estado', 'activo') // O el estado que indique que está activo
+            ->where('status', 'activo') // Corregido: 'estado' a 'status'
             ->whereDate('fecha', Carbon::today())
             ->first();
     }
