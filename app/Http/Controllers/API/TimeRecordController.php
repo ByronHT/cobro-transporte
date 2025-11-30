@@ -17,86 +17,52 @@ class TimeRecordController extends Controller
         $today = Carbon::today();
         $tipoViaje = $trip->tipo_viaje; // 'ida' o 'vuelta'
 
-        // Buscar el último registro de hoy para el chofer
-        $latestRecord = TimeRecord::where('driver_id', $driverId)
-            ->whereDate('created_at', $today)
-            ->orderBy('created_at', 'desc')
-            ->first();
-
-        $recordToUpdate = null;
-
         if ($tipoViaje === 'ida') {
-            // Si el tipo de viaje es IDA, buscamos un registro para actualizar solo si no tiene una IDA registrada hoy
-            // o si tiene una IDA y VUELTA ya completadas (para iniciar un nuevo ciclo)
-            if ($latestRecord && (!$latestRecord->inicio_ida || ($latestRecord->inicio_ida && $latestRecord->fin_vuelta_real))) {
-                $recordToUpdate = $latestRecord;
-            } else if (!$latestRecord || ($latestRecord->inicio_ida && !$latestRecord->fin_ida) || ($latestRecord->inicio_vuelta && !$latestRecord->fin_vuelta_real)) {
-                // Si hay un viaje de ida en curso o vuelta en curso, creamos un nuevo registro para esta IDA.
-                // Esto maneja el caso de que un chofer inicie una nueva ida sin finalizar la anterior (error o intención de nuevo ciclo)
-                // O si está en vuelta y quiere iniciar una nueva ida (nuevo ciclo)
-                $recordToUpdate = null; // Fuerza la creación de un nuevo registro
-            } else {
-                // Si hay un registro con una ida ya completada pero sin vuelta, o si ya completó una ida y vuelta
-                // esto debe crear un nuevo registro para la nueva IDA.
-                $recordToUpdate = null; // Fuerza la creación de un nuevo registro
-            }
+            // Para viajes de IDA, siempre creamos un nuevo registro. Es más simple y robusto.
+            $record = TimeRecord::create([
+                'driver_id' => $driverId,
+                'turno_id' => optional($this->getCurrentTurno($driverId))->id,
+                'trip_ida_id' => $trip->id,
+                'inicio_ida' => now(),
+                'estado' => 'en_curso',
+            ]);
+            return $record;
+        } 
+        
+        if ($tipoViaje === 'vuelta') {
+            // Para viajes de VUELTA, buscamos el último registro del día que haya finalizado una ida y no tenga una vuelta iniciada.
+            $recordToUpdate = TimeRecord::where('driver_id', $driverId)
+                ->whereDate('created_at', $today)
+                ->whereNotNull('fin_ida')
+                ->whereNull('inicio_vuelta')
+                ->orderBy('created_at', 'desc')
+                ->first();
 
             if ($recordToUpdate) {
                 $recordToUpdate->update([
-                    'trip_ida_id' => $trip->id,
-                    'inicio_ida' => now(),
-                    'estado' => 'en_curso',
-                    'updated_at' => now(),
-                    'fin_ida' => null, // Asegurar que fin_ida se borre si se está reiniciando un record
-                ]);
-            } else {
-                $recordToUpdate = TimeRecord::create([
-                    'driver_id' => $driverId,
-                    'turno_id' => $this->getCurrentTurno($driverId) ? $this->getCurrentTurno($driverId)->id : null,
-                    'trip_ida_id' => $trip->id,
-                    'inicio_ida' => now(),
-                    'estado' => 'en_curso',
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-            }
-        } elseif ($tipoViaje === 'vuelta') {
-            // Si el tipo de viaje es VUELTA, buscamos un registro con una IDA iniciada y sin VUELTA iniciada
-            if ($latestRecord && $latestRecord->inicio_ida && !$latestRecord->inicio_vuelta) {
-                $recordToUpdate = $latestRecord;
-                $recordToUpdate->update([
                     'trip_vuelta_id' => $trip->id,
                     'inicio_vuelta' => now(),
                     'estado' => 'en_curso',
-                    'updated_at' => now(),
-                    'fin_vuelta_estimado' => $this->getEstimatedEndTime($trip, $latestRecord), // Lógica de estimación
+                    'fin_vuelta_estimado' => $this->getEstimatedEndTime($trip, $recordToUpdate),
                 ]);
+                return $recordToUpdate;
             } else {
-                // Si no hay un IDA previo o ya tiene una vuelta, creamos un nuevo registro para esta VUELTA.
-                // Esto podría indicar un flujo inesperado o un error de lógica del cliente.
-                $recordToUpdate = TimeRecord::create([
+                // Flujo inesperado: se inicia una vuelta sin una ida previa.
+                // Creamos un registro solo con la info de vuelta para no perder el dato.
+                $record = TimeRecord::create([
                     'driver_id' => $driverId,
-                    'turno_id' => $this->getCurrentTurno($driverId) ? $this->getCurrentTurno($driverId)->id : null,
+                    'turno_id' => optional($this->getCurrentTurno($driverId))->id,
                     'trip_vuelta_id' => $trip->id,
                     'inicio_vuelta' => now(),
                     'estado' => 'en_curso',
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                    'fin_vuelta_estimado' => $this->getEstimatedEndTime($trip, $latestRecord),
+                    'fin_vuelta_estimado' => $this->getEstimatedEndTime($trip, null),
                 ]);
+                return $record;
             }
         }
-        return $recordToUpdate;
-    }
 
-    /**
-     * Registra el inicio de un viaje IDA.
-     * Llamado internamente por DriverActionController.
-     *
-     * @param Trip $trip
-     * @return TimeRecord
-     */
-    public function registerTripStart(Trip $trip)
+        return null; // No debería llegar aquí si tipo_viaje es siempre 'ida' o 'vuelta'
+    }
 
     /**
      * Obtener registros de horas del chofer actual
@@ -120,18 +86,17 @@ class TimeRecordController extends Controller
         $today = Carbon::today();
         $tipoViaje = $trip->tipo_viaje;
 
-        // Buscar el registro de horas que contenga este trip_id
+        // Buscar el registro de horas que corresponda a este viaje.
         $record = TimeRecord::where('driver_id', $driverId)
-            ->whereDate('created_at', $today)
             ->where(function ($query) use ($trip) {
                 $query->where('trip_ida_id', $trip->id)
-                    ->orWhere('trip_vuelta_id', $trip->id);
+                      ->orWhere('trip_vuelta_id', $trip->id);
             })
             ->orderBy('created_at', 'desc')
             ->first();
 
         if (!$record) {
-            // Esto no debería ocurrir si el registerTripStart funcionó correctamente
+            // No se encontró un registro de tiempo para este viaje. No podemos continuar.
             return null;
         }
 
@@ -140,32 +105,41 @@ class TimeRecordController extends Controller
 
         if ($tipoViaje === 'ida' && $record->trip_ida_id === $trip->id && !$record->fin_ida) {
             $updateData['fin_ida'] = $finReal;
-            // Calcular tiempo real y retraso para la IDA
-            $tiempoReal = Carbon::parse($record->inicio_ida)->diffInMinutes($finReal);
-            // Necesitamos una manera de obtener el tiempo estimado para la IDA, por ahora un default
-            $tiempoEstimado = 45; // TODO: Lógica para obtener tiempo estimado de IDA
-            $retraso = $tiempoReal - $tiempoEstimado;
-            $updateData['estado'] = $retraso > 5 ? 'retrasado' : 'normal'; // tolerancia 5 min
-            $updateData['tiempo_retraso_minutos'] = $retraso > 5 ? $retraso : null;
+            
+            // Solo calcular si la fecha de inicio existe, para evitar errores.
+            if ($record->inicio_ida) {
+                $tiempoReal = Carbon::parse($record->inicio_ida)->diffInMinutes($finReal);
+                $tiempoEstimado = 45; // Default
+                $retraso = $tiempoReal - $tiempoEstimado;
+                
+                if ($retraso > 5) {
+                    $updateData['estado'] = 'retrasado';
+                    $updateData['tiempo_retraso_minutos'] = $retraso;
+                } else {
+                    $updateData['estado'] = 'normal';
+                }
+            }
         } elseif ($tipoViaje === 'vuelta' && $record->trip_vuelta_id === $trip->id && !$record->fin_vuelta_real) {
             $updateData['fin_vuelta_real'] = $finReal;
-            // Calcular retraso para la VUELTA
+
+            // Solo calcular retraso si la fecha estimada existe, para evitar errores.
             if ($record->fin_vuelta_estimado) {
                 $llegadaEstimada = Carbon::parse($record->fin_vuelta_estimado);
                 $retraso = $finReal->diffInMinutes($llegadaEstimada, false); // negativo si llegó antes
-                $updateData['estado'] = $retraso > 5 ? 'retrasado' : 'normal';
-                $updateData['tiempo_retraso_minutos'] = $retraso > 5 ? $retraso : null;
+                
+                if ($retraso > 5) {
+                    $updateData['estado'] = 'retrasado';
+                    $updateData['tiempo_retraso_minutos'] = $retraso;
+                } else {
+                    $updateData['estado'] = 'normal';
+                }
             } else {
-                $updateData['estado'] = 'normal';
+                $updateData['estado'] = 'normal'; // No se puede calcular retraso
             }
 
             // Marcar como último viaje si es después de las 9 PM
-            if ($finReal->hour >= 21) { // 21:00 (9 PM)
+            if ($finReal->hour >= 21) {
                 $updateData['es_ultimo_viaje'] = true;
-                // Marcar todos los registros de hoy como completados si este es el último viaje
-                TimeRecord::where('driver_id', $driverId)
-                    ->whereDate('created_at', $today)
-                    ->update(['es_ultimo_viaje' => true]);
             }
         }
 
