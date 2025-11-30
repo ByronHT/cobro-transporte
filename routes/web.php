@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\TransactionController;
 use App\Http\Controllers\Admin\ComplaintController;
 use App\Http\Controllers\Admin\ReporteController;
 use App\Http\Controllers\Admin\DevolucionController;
+use App\Http\Controllers\Admin\TurnoController;
 use Illuminate\Support\Facades\Artisan;
 
 
@@ -81,6 +82,9 @@ Route::middleware(['auth', 'role:admin'])
         Route::get('/devoluciones/{id}/edit', [DevolucionController::class, 'edit'])->name('devoluciones.edit');
         Route::put('/devoluciones/{id}', [DevolucionController::class, 'update'])->name('devoluciones.update');
         Route::delete('/devoluciones/{id}/revertir', [DevolucionController::class, 'revertir'])->name('devoluciones.revertir');
+
+        // Módulo de Turnos
+        Route::get('/turnos', [TurnoController::class, 'index'])->name('turnos.index');
 
         // Monitoreo
         Route::get('/monitoring/trips', [MonitoringController::class, 'trips'])->name('monitoring.trips');

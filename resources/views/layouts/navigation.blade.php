@@ -115,7 +115,19 @@
                         Viajes
                     </a>
 
-                    {{-- 7. Transacciones --}}
+                    {{-- 7. Turnos --}}
+                    <a href="{{ route('admin.turnos.index') }}"
+                       class="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200
+                       {{ request()->routeIs('admin.turnos.*')
+                           ? 'bg-blue-700 text-white shadow-lg'
+                           : 'text-blue-100 hover:bg-blue-700/50 hover:text-white' }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
+                        </svg>
+                        Turnos
+                    </a>
+
+                    {{-- 8. Transacciones --}}
                     <a href="{{ route('admin.transactions.index') }}"
                        class="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200
                        {{ request()->routeIs('admin.transactions.*')
@@ -207,7 +219,11 @@
             <x-responsive-nav-link :href="route('admin.trips.index')" :active="request()->routeIs('admin.trips.*')" class="text-blue-100">
                 Viajes
             </x-responsive-nav-link>
-            {{-- 7. Transacciones --}}
+            {{-- 7. Turnos --}}
+            <x-responsive-nav-link :href="route('admin.turnos.index')" :active="request()->routeIs('admin.turnos.*')" class="text-blue-100">
+                Turnos
+            </x-responsive-nav-link>
+            {{-- 8. Transacciones --}}
             <x-responsive-nav-link :href="route('admin.transactions.index')" :active="request()->routeIs('admin.transactions.*')" class="text-blue-100">
                 Transacciones
             </x-responsive-nav-link>
