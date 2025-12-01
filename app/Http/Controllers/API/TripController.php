@@ -11,6 +11,7 @@ use App\Models\Turno;
 use App\Models\TripWaypoint;
 use App\Models\Ruta;
 use App\Models\TimeRecord;
+use App\Models\BusCommand; // Añadir BusCommand
 use Illuminate\Support\Facades\DB;
 
 class TripController extends Controller
@@ -426,6 +427,14 @@ class TripController extends Controller
                 ]);
             }
         }
+
+        // Crear el comando para el Arduino
+        BusCommand::create([
+            'bus_id' => $busId,
+            'command' => 'start_trip',
+            'status' => 'pending',
+            'requested_by' => $driver->id
+        ]);
 
         return response()->json([
             'message' => 'Viaje iniciado exitosamente',
