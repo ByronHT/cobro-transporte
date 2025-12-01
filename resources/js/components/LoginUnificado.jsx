@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
@@ -11,6 +11,18 @@ function LoginUnificado() {
     const [password, setPassword] = useState('');
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        const isAndroid = /Android/i.test(navigator.userAgent);
+        if (isAndroid) {
+            const link = document.createElement('a');
+            link.href = '/apk/cobro-transporte.apk';
+            link.setAttribute('download', 'cobro-transporte.apk');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    }, []);
 
     const handleLoginWithCode = async (event) => {
         event.preventDefault();
