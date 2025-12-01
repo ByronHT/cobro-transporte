@@ -308,6 +308,11 @@ function DriverDashboard() {
                 </div>
             )}
              {/* ... (otros modales) ... */}
+            <HorasModal 
+                isOpen={showHorasModal} 
+                onClose={() => setShowHorasModal(false)}
+                apiClient={apiClient}
+            />
         </div>
     );
 }

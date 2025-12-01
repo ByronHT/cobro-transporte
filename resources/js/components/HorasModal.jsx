@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const HorasModal = ({ isOpen, onClose }) => {
+const HorasModal = ({ isOpen, onClose, apiClient }) => {
     const [records, setRecords] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -16,22 +16,10 @@ const HorasModal = ({ isOpen, onClose }) => {
         setError(null);
 
         try {
-            const token = localStorage.getItem('driver_token');
-            const response = await fetch('/api/driver/time-records/turno', {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Accept': 'application/json',
-                },
-            });
-
-            if (!response.ok) {
-                throw new Error('Error al cargar registros de horas');
-            }
-
-            const data = await response.json();
-            setRecords(data);
+            const response = await apiClient.get('/api/driver/time-records/turno');
+            setRecords(response.data);
         } catch (err) {
-            setError(err.message);
+            setError(err.message || 'Error al cargar registros de horas');
         } finally {
             setLoading(false);
         }
