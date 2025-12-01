@@ -83,14 +83,37 @@ class UserController extends Controller
             'name'=>'required|string|max:255',
             'email'=>"required|email|unique:users,email,{$user->id}",
             'nit'=>'nullable|string|max:20',
+            'password'=>'nullable|string|min:6|confirmed',
             'role'=>'required|in:admin,driver,passenger',
-            'active'=>'required|boolean'
+            'login_code'=>"required|string|size:4|unique:users,login_code,{$user->id}",
+            'ci'=>'nullable|string|max:20',
+            'birth_date'=>'nullable|date',
+            'user_type'=>'required_if:role,passenger|nullable|in:adult,senior,minor,student_school,student_university',
+            'school_name'=>'required_if:user_type,student_school|nullable|string|max:255',
+            'university_name'=>'required_if:user_type,student_university|nullable|string|max:255',
+            'university_year'=>'required_if:user_type,student_university|nullable|integer|min:1|max:7',
+            'university_end_year'=>'required_if:user_type,student_university|nullable|integer|min:2025'
         ]);
 
-        $user->update($request->only(['name','email','nit','role','active']));
+        $data = $request->only([
+            'name', 'email', 'nit', 'role', 'ci', 'birth_date', 'login_code',
+            'user_type', 'school_name', 'university_name', 'university_year', 'university_end_year'
+        ]);
+        $data['active'] = $request->has('active');
+        
+        // Si el rol no es pasajero, limpiar los campos específicos de pasajero
+        if ($request->role !== 'passenger') {
+            $data['user_type'] = 'adult'; // Default
+            $data['school_name'] = null;
+            $data['university_name'] = null;
+            $data['university_year'] = null;
+            $data['university_end_year'] = null;
+        }
 
-        if ($request->password) {
-            $user->update(['password'=>Hash::make($request->password)]);
+        $user->update($data);
+
+        if ($request->filled('password')) {
+            $user->update(['password' => Hash::make($request->password)]);
         }
 
         return redirect()->route('admin.users.index')->with('success','Usuario actualizado correctamente');

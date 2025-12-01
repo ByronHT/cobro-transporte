@@ -16,7 +16,7 @@ class TurnoController extends Controller
         $driverId = $request->input('driver_id');
         $date = $request->input('date');
 
-        $turnosQuery = Turno::with(['driver', 'busInicial'])->latest();
+        $turnosQuery = Turno::with(['driver', 'busInicial', 'trips.ruta', 'trips.bus'])->latest();
 
         if ($driverId) {
             $turnosQuery->where('driver_id', $driverId);

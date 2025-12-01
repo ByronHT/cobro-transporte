@@ -3,27 +3,33 @@
         <div class="max-w-full mx-auto sm:px-6 lg:px-8">
             <div class="bg-white rounded-xl shadow-lg overflow-hidden" style="height: calc(100vh - 180px);">
                 <div class="flex h-full">
-                    {{-- Mapa --}}
-                    <div class="flex-1 relative">
-                        <div id="map" style="width: 100%; height: 100%;"></div>
-
-                        {{-- Filtro de líneas (flotante sobre el mapa) --}}
-                        <div class="absolute top-4 left-4 bg-white rounded-lg shadow-lg p-4 z-10" style="min-width: 250px;">
-                            <label class="block text-sm font-bold text-gray-700 mb-2">Filtrar por Línea</label>
-                            <select id="rutaFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                                <option value="">Todas las líneas</option>
-                                @foreach($rutas as $ruta)
-                                    <option value="{{ $ruta->id }}">{{ $ruta->nombre }} - {{ $ruta->descripcion }}</option>
-                                @endforeach
-                            </select>
+                    {{-- Contenedor principal del mapa y controles --}}
+                    <div class="flex-1 flex flex-col h-full">
+                        {{-- Sección de Controles --}}
+                        <div class="p-4 bg-gray-100 border-b border-gray-200 shadow-sm">
+                            <div class="bg-white rounded-lg p-4 max-w-md">
+                                <label for="rutaFilter" class="block text-sm font-bold text-gray-700 mb-2">Filtrar por Línea</label>
+                                <select id="rutaFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                    <option value="">Todas las líneas</option>
+                                    @foreach($rutas as $ruta)
+                                        <option value="{{ $ruta->id }}">{{ $ruta->nombre }} - {{ $ruta->descripcion }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
                         </div>
 
-                        {{-- Contador de buses (flotante) --}}
-                        <div class="absolute top-4 right-4 bg-blue-600 text-white rounded-lg shadow-lg px-4 py-2 z-10">
-                            <div class="text-sm font-semibold">Buses Activos</div>
-                            <div class="text-2xl font-bold" id="busCount">0</div>
+                        {{-- Mapa --}}
+                        <div class="flex-1 relative">
+                            <div id="map" style="width: 100%; height: 100%;"></div>
+
+                            {{-- Contador de buses (flotante) --}}
+                            <div class="absolute top-4 right-4 bg-blue-600 text-white rounded-lg shadow-lg px-4 py-2 z-10">
+                                <div class="text-sm font-semibold">Buses Activos</div>
+                                <div class="text-2xl font-bold" id="busCount">0</div>
+                            </div>
                         </div>
                     </div>
+
 
                     {{-- Sidebar con información del bus seleccionado --}}
                     <div class="w-96 bg-gray-50 border-l border-gray-200 overflow-y-auto">

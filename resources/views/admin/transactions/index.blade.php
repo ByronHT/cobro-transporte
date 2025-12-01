@@ -28,9 +28,6 @@
         {{-- Filtros --}}
         <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
             <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-600" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clip-rule="evenodd" />
-                </svg>
                 Filtros de Búsqueda
             </h3>
             <form method="GET" action="{{ route('admin.transactions.index') }}" class="flex flex-wrap gap-4 items-end">
@@ -74,14 +71,9 @@
         {{-- Tabla de transacciones --}}
         <div id="transactions-table" class="bg-white rounded-xl shadow-lg overflow-hidden">
             <div class="px-6 py-4 bg-gradient-to-r from-green-600 to-green-700">
-                <h3 class="font-bold text-xl text-white flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
-                        <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd" />
-                    </svg>
-                    Listado de Transacciones
-                </h3>
-            </div>
+                            <h3 class="font-bold text-xl text-white flex items-center gap-2">
+                                Listado de Transacciones
+                            </h3>            </div>
 
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">

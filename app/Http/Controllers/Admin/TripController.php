@@ -25,7 +25,7 @@ class TripController extends Controller
         $buses = Bus::all();
 
         // Query de trips con filtros
-        $tripsQuery = Trip::with(['bus.ruta','ruta','driver']);
+        $tripsQuery = Trip::with(['bus.ruta','ruta','driver'])->withSum('transactions', 'amount');
 
         if ($driverId) {
             $tripsQuery->where('driver_id', $driverId);
@@ -132,7 +132,7 @@ class TripController extends Controller
         $busId = $request->query('bus_id');
         $date = $request->query('date');
 
-        $tripsQuery = Trip::with(['bus.ruta','ruta','driver']);
+        $tripsQuery = Trip::with(['bus.ruta','ruta','driver'])->withSum('transactions', 'amount');
 
         if ($driverId) {
             $tripsQuery->where('driver_id', $driverId);

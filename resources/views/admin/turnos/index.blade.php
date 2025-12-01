@@ -58,12 +58,13 @@
                             <th class="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Fecha</th>
                             <th class="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Horas</th>
                             <th class="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Estado</th>
-                            <th class="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Recaudado</th>
+                            <th class="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Total Turno</th>
+                            <th class="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider"></th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
                         @forelse($turnos as $turno)
-                            <tr class="hover:bg-blue-50 transition-colors duration-150">
+                            <tr class="hover:bg-blue-50 transition-colors duration-150" x-data="{ open: false }">
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">#{{ $turno->id }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-800">{{ $turno->driver->name ?? 'N/A' }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{{ $turno->busInicial->plate ?? 'N/A' }}</td>
@@ -83,10 +84,61 @@
                                     @endif
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Bs. {{ number_format($turno->total_recaudado, 2) }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                    <button @click="open = !open" class="text-blue-600 hover:text-blue-900">
+                                        <svg x-show="!open" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                        </svg>
+                                        <svg x-show="open" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" style="display: none;">
+                                            <path fill-rule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clip-rule="evenodd" />
+                                        </svg>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr x-show="open" style="display: none;">
+                                <td colspan="8" class="p-4 bg-gray-50">
+                                    <div class="p-4 bg-white rounded-lg shadow-inner">
+                                        <h4 class="font-bold text-md text-gray-700 mb-3">Detalle de Viajes del Turno #{{ $turno->id }}</h4>
+                                        @if($turno->trips->isEmpty())
+                                            <p class="text-sm text-gray-500">Este turno no tiene viajes registrados.</p>
+                                        @else
+                                            <table class="min-w-full divide-y divide-gray-200">
+                                                <thead class="bg-gray-100">
+                                                    <tr>
+                                                        <th class="px-4 py-2 text-left text-xs font-bold text-gray-600 uppercase">Tipo</th>
+                                                        <th class="px-4 py-2 text-left text-xs font-bold text-gray-600 uppercase">Ruta</th>
+                                                        <th class="px-4 py-2 text-left text-xs font-bold text-gray-600 uppercase">Bus</th>
+                                                        <th class="px-4 py-2 text-left text-xs font-bold text-gray-600 uppercase">Inicio</th>
+                                                        <th class="px-4 py-2 text-left text-xs font-bold text-gray-600 uppercase">Fin</th>
+                                                        <th class="px-4 py-2 text-left text-xs font-bold text-gray-600 uppercase">Recaudado</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach($turno->trips as $trip)
+                                                        <tr class="border-b">
+                                                            <td class="px-4 py-3 whitespace-nowrap text-sm">
+                                                                @if($trip->tipo_viaje == 'ida')
+                                                                    <span class="font-semibold text-blue-600">Ida</span>
+                                                                @else
+                                                                    <span class="font-semibold text-green-600">Vuelta</span>
+                                                                @endif
+                                                            </td>
+                                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{{ $trip->ruta->nombre ?? 'N/A' }}</td>
+                                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{{ $trip->bus->plate ?? 'N/A' }}</td>
+                                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{{ \Carbon\Carbon::parse($trip->inicio)->format('H:i:s') }}</td>
+                                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{{ $trip->fin ? \Carbon\Carbon::parse($trip->fin)->format('H:i:s') : 'En curso' }}</td>
+                                                            <td class="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-800">Bs. {{ number_format($trip->total_recaudado, 2) }}</td>
+                                                        </tr>
+                                                    @endforeach
+                                                </tbody>
+                                            </table>
+                                        @endif
+                                    </div>
+                                </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="px-6 py-12 text-center text-gray-500">
+                                <td colspan="8" class="px-6 py-12 text-center text-gray-500">
                                     No se encontraron turnos para la selección actual.
                                 </td>
                             </tr>
