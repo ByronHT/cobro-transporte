@@ -149,7 +149,7 @@
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
                         </svg>
-                        Tiempo Real
+                        Monitorear
                     </a>
 
                     {{-- 9. Quejas --}}
@@ -227,9 +227,9 @@
             <x-responsive-nav-link :href="route('admin.transactions.index')" :active="request()->routeIs('admin.transactions.*')" class="text-blue-100">
                 Transacciones
             </x-responsive-nav-link>
-            {{-- 8. Tiempo Real --}}
+            {{-- 8. Monitorear --}}
             <x-responsive-nav-link :href="route('admin.realtime')" :active="request()->routeIs('admin.realtime')" class="text-blue-100">
-                Tiempo Real
+                Monitorear
             </x-responsive-nav-link>
             {{-- 9. Quejas --}}
             <x-responsive-nav-link :href="route('admin.complaints.index')" :active="request()->routeIs('admin.complaints.*')" class="text-blue-100">
