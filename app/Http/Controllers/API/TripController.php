@@ -10,7 +10,7 @@ use App\Models\PaymentEvent;
 use App\Models\Turno;
 use App\Models\TripWaypoint;
 use App\Models\Ruta;
-use App\Http\Controllers\API\TimeRecordController;
+use App\Models\TimeRecord;
 use Illuminate\Support\Facades\DB;
 
 class TripController extends Controller
