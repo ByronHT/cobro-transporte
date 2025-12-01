@@ -10,7 +10,9 @@ use App\Models\Transaction;
 use App\Models\Trip;
 use App\Models\Card;
 use App\Models\User;
-use App\Http\Controllers\API\TimeRecordController;
+use App\Models\TimeRecord; // Añado TimeRecord Model
+use App\Models\Turno; // Añado Turno Model
+use Carbon\Carbon; // Añado Carbon
 use Illuminate\Support\Facades\DB;
 
 class DriverActionController extends Controller
@@ -54,9 +56,41 @@ class DriverActionController extends Controller
             'tipo_viaje' => $request->tipo_viaje,
         ]);
 
-        // Registrar el inicio del viaje en el TimeRecordController
-        $timeRecordController = new TimeRecordController();
-        $timeRecordController->registerTripStart($trip);
+        // Registrar el inicio del viaje en el TimeRecord
+        if ($trip->tipo_viaje === 'ida') {
+            TimeRecord::create([
+                'driver_id' => $driver->id,
+                'turno_id' => $this->getCurrentTurno($driver->id)->id ?? null,
+                'trip_ida_id' => $trip->id,
+                'inicio_ida' => now(),
+                'estado' => 'en_curso',
+            ]);
+        } elseif ($trip->tipo_viaje === 'vuelta') {
+            $recordToUpdate = TimeRecord::where('driver_id', $driver->id)
+                ->where('turno_id', $this->getCurrentTurno($driver->id)->id ?? null)
+                ->whereDate('created_at', Carbon::today())
+                ->whereNotNull('fin_ida')
+                ->whereNull('inicio_vuelta')
+                ->orderBy('created_at', 'desc')
+                ->first();
+
+            if ($recordToUpdate) {
+                $recordToUpdate->update([
+                    'trip_vuelta_id' => $trip->id,
+                    'inicio_vuelta' => now(),
+                    'estado' => 'en_curso',
+                ]);
+            } else {
+                TimeRecord::create([
+                    'driver_id' => $driver->id,
+                    'turno_id' => $this->getCurrentTurno($driver->id)->id ?? null,
+                    'trip_vuelta_id' => $trip->id,
+                    'inicio_vuelta' => now(),
+                    'estado' => 'en_curso',
+                ]);
+            }
+        }
+
 
         // Crear el comando en la base de datos
         BusCommand::create([
@@ -107,9 +141,70 @@ class DriverActionController extends Controller
 
         $activeTrip->save();
 
-        // Registrar el fin del viaje en el TimeRecordController
-        $timeRecordController = new TimeRecordController();
-        $timeRecordController->registerTripEnd($activeTrip);
+        // Registrar el fin del viaje en el TimeRecord
+        $driverId = $driver->id;
+        $tipoViaje = $activeTrip->tipo_viaje;
+
+        // Buscar el registro de horas que corresponda a este viaje.
+        $record = TimeRecord::where('driver_id', $driverId)
+            ->where(function ($query) use ($activeTrip) {
+                $query->where('trip_ida_id', $activeTrip->id)
+                      ->orWhere('trip_vuelta_id', $activeTrip->id);
+            })
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+        if (!$record) {
+            \Log::warning("No se encontró TimeRecord para Trip ID: {$activeTrip->id} en requestTripEnd de DriverActionController.");
+        } else {
+            $finReal = now();
+            $updateData = [];
+
+            if ($tipoViaje === 'ida' && $record->trip_ida_id === $activeTrip->id && !$record->fin_ida) {
+                $updateData['fin_ida'] = $finReal;
+                
+                // Solo calcular si la fecha de inicio existe, para evitar errores.
+                if ($record->inicio_ida) {
+                    $tiempoReal = Carbon::parse($record->inicio_ida)->diffInMinutes($finReal);
+                    $tiempoEstimado = 45; // Default
+                    $retraso = $tiempoReal - $tiempoEstimado;
+                    
+                    if ($retraso > 5) {
+                        $updateData['estado'] = 'retrasado';
+                        $updateData['tiempo_retraso_minutos'] = $retraso;
+                    } else {
+                        $updateData['estado'] = 'normal';
+                    }
+                }
+            } elseif ($tipoViaje === 'vuelta' && $record->trip_vuelta_id === $activeTrip->id && !$record->fin_vuelta_real) {
+                $updateData['fin_vuelta_real'] = $finReal;
+
+                // Solo calcular retraso si la fecha estimada existe, para evitar errores.
+                if ($record->fin_vuelta_estimado) {
+                    $llegadaEstimada = Carbon::parse($record->fin_vuelta_estimado);
+                    $retraso = $finReal->diffInMinutes($llegadaEstimada, false); // negativo si llegó antes
+                    
+                    if ($retraso > 5) {
+                        $updateData['estado'] = 'retrasado';
+                        $updateData['tiempo_retraso_minutos'] = $retraso;
+                    } else {
+                        $updateData['estado'] = 'normal';
+                    }
+                } else {
+                    $updateData['estado'] = 'normal'; // No se puede calcular retraso
+                }
+
+                // Marcar como último viaje si es después de las 9 PM
+                if ($finReal->hour >= 21) {
+                    $updateData['es_ultimo_viaje'] = true;
+                }
+            }
+
+            if (!empty($updateData)) {
+                $record->update($updateData);
+            }
+        }
+
 
         // Crear el comando para que el Arduino también se entere
         $command = BusCommand::create([
@@ -322,4 +417,17 @@ class DriverActionController extends Controller
         }
     }
 
+    /**
+     * Obtiene el turno activo actual para un chofer.
+     *
+     * @param int $driverId
+     * @return \App\Models\Turno|null
+     */
+    private function getCurrentTurno(int $driverId)
+    {
+        return \App\Models\Turno::where('driver_id', $driverId)
+            ->where('status', 'activo')
+            ->whereDate('fecha', Carbon::today())
+            ->first();
+    }
 }
