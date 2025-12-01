@@ -90,7 +90,7 @@ function DriverDashboard() {
 
     const [showStartTurnoModal, setShowStartTurnoModal] = useState(false);
     const [showEndTurnoModal, setShowEndTurnoModal] = useState(false);
-    // const [showStartTripModal, setShowStartTripModal] = useState(false); // Eliminado: Modal de inicio de viaje
+
     const [showEndTripModal, setShowEndTripModal] = useState(false);
     const [busesDisponibles, setBusesDisponibles] = useState([]);
     const [selectedBusForTurno, setSelectedBusForTurno] = useState(null);

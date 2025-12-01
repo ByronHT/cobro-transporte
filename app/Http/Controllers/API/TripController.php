@@ -393,13 +393,58 @@ class TripController extends Controller
         ]);
 
         // Registrar el inicio del viaje en el sistema de control de horas
-        $timeRecordController = new TimeRecordController();
-        $timeRecordController->registerTripStart($trip);
+        if ($trip->tipo_viaje === 'ida') {
+            TimeRecord::create([
+                'driver_id' => $driver->id,
+                'turno_id' => $turno->id,
+                'trip_ida_id' => $trip->id,
+                'inicio_ida' => now(),
+                'estado' => 'en_curso',
+            ]);
+        } elseif ($trip->tipo_viaje === 'vuelta') {
+            $recordToUpdate = TimeRecord::where('driver_id', $driver->id)
+                ->where('turno_id', $turno->id)
+                ->whereNotNull('fin_ida')
+                ->whereNull('inicio_vuelta')
+                ->orderBy('created_at', 'desc')
+                ->first();
+
+            if ($recordToUpdate) {
+                $recordToUpdate->update([
+                    'trip_vuelta_id' => $trip->id,
+                    'inicio_vuelta' => now(),
+                    'estado' => 'en_curso',
+                ]);
+            } else {
+                // Si no hay una ida, se crea un registro solo con la vuelta
+                TimeRecord::create([
+                    'driver_id' => $driver->id,
+                    'turno_id' => $turno->id,
+                    'trip_vuelta_id' => $trip->id,
+                    'inicio_vuelta' => now(),
+                    'estado' => 'en_curso',
+                ]);
+            }
+        }
 
         return response()->json([
             'message' => 'Viaje iniciado exitosamente',
             'trip' => $trip->load('bus', 'ruta', 'turno')
         ], 201);
+    }
+
+    /**
+     * Obtiene el turno activo actual para un chofer.
+     *
+     * @param int $driverId
+     * @return \App\Models\Turno|null
+     */
+    private function getCurrentTurno(int $driverId)
+    {
+        return Turno::where('driver_id', $driverId)
+            ->where('status', 'activo')
+            ->whereDate('fecha', \Carbon\Carbon::today())
+            ->first();
     }
 
     /**
